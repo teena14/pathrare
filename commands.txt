@@ -1,0 +1,1 @@
+`npm install framer-motion firebase lucide-react` - Installed packages needed for PathRare frontend.

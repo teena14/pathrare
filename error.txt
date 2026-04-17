@@ -1,0 +1,2 @@
+- Initialised PathRare repository.
+- Scaffolding basic project setup including the necessary doc files.
