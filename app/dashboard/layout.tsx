@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, HeartHandshake, Users, HeartPulse, UserCircle } from 'lucide-react';
+import { Activity, HeartHandshake, Users, HeartPulse, UserCircle, Microscope } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: UserCircle },
+  { name: 'Diagnose', href: '/dashboard/diagnose', icon: Microscope },
   { name: 'Clinical Profile', href: '/dashboard/clinical-profile', icon: Activity },
   { name: 'Life Assist', href: '/dashboard/life-assist', icon: HeartHandshake },
   { name: 'Community', href: '/dashboard/community', icon: Users },

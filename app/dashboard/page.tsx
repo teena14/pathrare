@@ -35,6 +35,19 @@ const CommunityVisual = () => (
   </motion.svg>
 );
 
+const DiagnoseVisual = () => (
+  <motion.svg width="80" height="80" viewBox="0 0 100 100" className="drop-shadow-lg">
+    <circle cx="50" cy="50" r="40" fill="#4f46e5" opacity="0.08" />
+    <motion.circle cx="50" cy="50" r="22" stroke="#4f46e5" strokeWidth="2" fill="none"
+      animate={{ rotate: 360 }} transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+      strokeDasharray="8 4" />
+    <motion.circle cx="50" cy="28" r="5" fill="#4f46e5"
+      animate={{ cy: [28, 72, 28] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }} />
+    <circle cx="50" cy="50" r="8" fill="#4f46e5" opacity="0.9" />
+    <circle cx="50" cy="50" r="4" fill="#fff" />
+  </motion.svg>
+);
+
 const CareVisual = () => (
   <motion.svg width="80" height="80" viewBox="0 0 100 100" className="drop-shadow-lg">
     <circle cx="50" cy="50" r="40" fill="var(--color-cornflower)" opacity="0.1" />
@@ -45,6 +58,7 @@ const CareVisual = () => (
 
 export default function DashboardPage() {
   const cards = [
+    { title: 'Diagnose', desc: 'Upload a report — AI matches rare diseases from Orphanet.', Visual: DiagnoseVisual, href: '/dashboard/diagnose', color: 'border-indigo-200/60 bg-indigo-50/40 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-indigo-100' },
     { title: 'Clinical Profile', desc: 'Build your structured clinical identity.', Visual: ClinicalVisual, href: '/dashboard/clinical-profile', color: 'border-primary-blue/20 bg-primary-blue/5 hover:border-primary-blue hover:bg-primary-blue/10 hover:shadow-primary-blue/20' },
     { title: 'Life Assist', desc: 'Connect to NGOs, schemes, and help.', Visual: AssistVisual, href: '/dashboard/life-assist', color: 'border-pacific-blue/20 bg-pacific-blue/5 hover:border-pacific-blue hover:bg-pacific-blue/10 hover:shadow-pacific-blue/20' },
     { title: 'Community', desc: 'Find and interact with families like yours.', Visual: CommunityVisual, href: '/dashboard/community', color: 'border-medium-purple/20 bg-medium-purple/5 hover:border-medium-purple hover:bg-medium-purple/10 hover:shadow-medium-purple/20' },

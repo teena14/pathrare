@@ -1,2 +1,22 @@
 - Initialised PathRare repository.
 - Scaffolding basic project setup including the necessary doc files.
+
+- ERROR: auth/configuration-not-found
+  CAUSE: Email/Password and Google sign-in providers were not enabled in Firebase Console.
+  FIX: Enabled both providers under Authentication → Sign-in method in Firebase Console.
+
+- ERROR: Cross-Origin-Opener-Policy blocking window.closed (Google popup)
+  CAUSE: Browser COOP header prevented popup from communicating back with the app.
+  FIX: Added `Cross-Origin-Opener-Policy: same-origin-allow-popups` header in next.config.ts.
+
+- ERROR: FirebaseError: Failed to get document because the client is offline.
+  CAUSE: Cascade from broken Google popup — Firestore ran with no valid auth session.
+  FIX: Resolved by fixing the COOP header above.
+
+- ERROR: FirebaseError: Missing or insufficient permissions.
+  CAUSE: Firestore was created in production mode (deny all by default).
+  FIX: Updated Firestore Security Rules to allow authenticated users to read/write their own document.
+
+- ERROR: Firebase credentials — auth/configuration-not-found (second occurrence)
+  CAUSE: Switched Firebase project from pathrare-55629 to rarity-f316d; providers not enabled on new project.
+  FIX: Enabled Email/Password + Google providers on rarity-f316d in Firebase Console.

@@ -1,3 +1,16 @@
 - Next.js scaffolding with Tailwind CSS.
 - Basic Authentication UI scaffolding with 5 roles.
 - Basic Dashboard layout routing to 4 tabs.
+- Two-step auth flow: role selection is a mandatory first step before login/signup form is shown.
+- Firebase Authentication: Email/Password + Google Sign-In with Firestore user document creation.
+- COOP header fix: `same-origin-allow-popups` added to next.config.ts for Google popup auth.
+- Firebase project migrated to rarity-f316d; credentials stored securely in gitignored credentials/ folder.
+- Diagnostic Layer scaffold:
+    - data/orphanet/xml/ — drop zone for Orphanet XML dataset files (gitignored).
+    - data/orphanet/parsed/ — output folder for parsed JSON datasets.
+    - scripts/parse_orphanet.py — parses HPO, classification, and alignment XML files to JSON.
+    - scripts/embed_symptoms.py — generates Vertex AI text-embedding-004 vectors per disease.
+    - scripts/build_index.py — normalises and saves a cosine-similarity index for fast lookup.
+    - app/api/diagnose/route.ts — backend inference API: OCR (Vision API) → NLP (Gemini) → embed (Vertex AI) → rank.
+    - app/dashboard/diagnose/page.tsx — frontend UI: upload zone + symptom text mode, pipeline animation, ranked results cards.
+    - Diagnose added to dashboard nav and home page card grid.

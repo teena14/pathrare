@@ -39,3 +39,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# secrets & credentials — NEVER commit these
+/credentials/
+*.json.key
+
+# orphanet XML dataset — large files, not for GitHub
+/data/orphanet/xml/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.pkl
+*.faiss

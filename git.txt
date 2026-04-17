@@ -1,2 +1,4 @@
 - Initialised PathRare repository.
 - Scaffolding basic project setup including the necessary doc files.
+- NOTE: credentials/, data/orphanet/xml/, and .env.local are all gitignored and must NEVER be committed.
+- Switched Firebase project to rarity-f316d (updated .env.local; new creds stored in credentials/).
