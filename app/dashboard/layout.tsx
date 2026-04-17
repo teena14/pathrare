@@ -16,26 +16,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950">
+    <div className="min-h-screen flex flex-col bg-surface-50">
       {/* Persistent Top Navbar */}
-      <nav className="sticky top-0 z-50 glass border-b border-white/5">
+      <nav className="sticky top-0 z-50 glass border-b border-surface-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-8">
-              <Link href="/dashboard" className="text-xl font-bold flex items-center gap-2">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center gap-10">
+              <Link href="/dashboard" className="text-2xl font-black flex items-center gap-2 tracking-tight">
                 <span className="text-gradient">PathRare</span>
               </Link>
-              <div className="hidden md:flex items-baseline space-x-1">
+              <div className="hidden md:flex items-baseline space-x-2">
                 {navItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
                     <Link
                       key={item.name}
                       href={item.href}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
                         isActive 
-                          ? 'bg-slate-800 text-white' 
-                          : 'text-slate-300 hover:bg-slate-800/50 hover:text-white'
+                          ? 'bg-primary-blue text-white shadow-md' 
+                          : 'text-light-slate hover:bg-surface-100 hover:text-primary-blue'
                       }`}
                     >
                       {item.name}
@@ -45,11 +45,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
-              <Link href="/" className="text-sm text-slate-400 hover:text-white transition-colors">
+            <div className="flex items-center gap-6">
+              <Link href="/" className="text-sm font-bold text-light-slate hover:text-primary-blue transition-colors">
                 Logout
               </Link>
-              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-primary-500 to-purple-500 flex items-center justify-center text-sm font-bold shadow-lg">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-primary-blue to-cornflower flex items-center justify-center text-white font-bold shadow-lg ring-4 ring-primary-blue/10">
                 G
               </div>
             </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Urbanist } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 const urbanist = Urbanist({
   variable: "--font-urbanist",
@@ -19,7 +20,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${urbanist.variable} h-full antialiased`}>
-      <body className="min-h-full bg-surface-50 text-dark-slate flex flex-col font-sans">{children}</body>
+      <body className="min-h-full bg-white text-slate-900 flex flex-col font-sans">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }
