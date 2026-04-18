@@ -14,3 +14,26 @@
     - app/api/diagnose/route.ts — backend inference API: OCR (Vision API) → NLP (Gemini) → embed (Vertex AI) → rank.
     - app/dashboard/diagnose/page.tsx — frontend UI: upload zone + symptom text mode, pipeline animation, ranked results cards.
     - Diagnose added to dashboard nav and home page card grid.
+
+[PHASE 2]
+- Auth overhaul:
+    - 6 role cards in 2×3 grid (added Coordinator: ASHA/Govt/Admin).
+    - Strict sign-up vs login distinction with role-conflict detection.
+    - Google button labels: "Sign up with Google" vs "Login with Google" per mode.
+    - Role-specific complete-profile forms (patient/ngo/volunteer/coordinator/hospital/doctor).
+    - Post-auth routing to role-specific dashboard based on Firestore role field.
+- Role-specific dashboards:
+    - /patient — home, life-assist, clinical-profile, community, care tabs.
+    - /ngo — task batch, demand by region, stats.
+    - /volunteer — match-scored task feed, accept interaction, reliability stats.
+    - /coordinator — RBAC role-switcher (ASHA/Govt/Admin), Leaflet heatmap, cluster list, unresolved escalation.
+- Life Assist engine (/patient/life-assist):
+    - 4 categories: Financial & Legal, Adaptive Education, Medical & Care, Assistive Technology.
+    - Ranked actions by priority score: (Urgency×0.4)+(Risk×0.3)+(Delay×0.2)+(Access×0.1).
+    - Multi-tier allocation: Tier1 Volunteer → Tier2 NGO → Tier3 Self-guided → Tier4 Queue.
+    - Zero dead-ends: user always gets next best action.
+- Backend API routes:
+    - /api/tasks — create/get structured task objects.
+    - /api/allocate — 4-tier allocation engine with priority scoring.
+- /dashboard deprecated: now redirects to role-specific route.
+- Leaflet heatmap installed and integrated in coordinator dashboard.

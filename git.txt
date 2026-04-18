@@ -2,3 +2,4 @@
 - Scaffolding basic project setup including the necessary doc files.
 - NOTE: credentials/, data/orphanet/xml/, and .env.local are all gitignored and must NEVER be committed.
 - Switched Firebase project to rarity-f316d (updated .env.local; new creds stored in credentials/).
+- [PHASE 2] Added role-specific routes (/patient, /ngo, /volunteer, /coordinator), Life Assist engine, auth overhaul, Leaflet heatmap, and API routes for tasks/allocate.

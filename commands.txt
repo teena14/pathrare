@@ -2,3 +2,4 @@
 `npm install google-auth-library` - Installed GCP auth library for server-side calls to Vision API and Vertex AI.
 `taskkill /PID <pid> /F` - Force-kill a running Next.js dev server process that was occupying port 3000.
 `npm run dev` - Start the Next.js development server on localhost:3000.
+`npm install react-leaflet leaflet @types/leaflet` - Installed Leaflet map library for coordinator heatmap dashboard.
