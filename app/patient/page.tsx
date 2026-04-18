@@ -89,7 +89,7 @@ const CARDS = [
   {
     title: 'Diagnose',
     desc: 'AI matches your symptoms against the Orphanet rare disease dataset.',
-    href: '/dashboard/diagnose',
+    href: '/patient/diagnose',
     Visual: DiagnoseVisual,
   },
   {
@@ -125,7 +125,7 @@ const container = {
 };
 const cardVariant = {
   hidden: { opacity: 0, y: 18 },
-  show:   { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -134,13 +134,13 @@ export default function PatientHomePage() {
   const name = (profile as any)?.firstName ?? profile?.displayName?.split(' ')[0] ?? 'there';
 
   return (
-    <div className="max-w-3xl space-y-10">
+    <div className="space-y-10">
 
       {/* Welcome */}
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
-        <p className="text-xs font-bold text-primary-blue uppercase tracking-widest mb-2">Patient Dashboard</p>
-        <h1 className="text-4xl font-black text-dark-slate tracking-tight leading-tight">
-          Good to see you,<br /><span className="text-primary-blue">{name}</span>
+
+        <h1 className="text-4xl font-black text-dark-slate tracking-tight leading-tight mt-7">
+          Welcome,<span className="text-primary-blue">{name}</span>
         </h1>
         <p className="text-light-slate font-medium mt-2 text-base">Your rare disease companion. Where are we focusing today?</p>
       </motion.div>
@@ -150,7 +150,7 @@ export default function PatientHomePage() {
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-4"
       >
         {CARDS.map((card) => {
           const { Visual } = card;

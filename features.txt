@@ -12,8 +12,8 @@
     - scripts/embed_symptoms.py — generates Vertex AI text-embedding-004 vectors per disease.
     - scripts/build_index.py — normalises and saves a cosine-similarity index for fast lookup.
     - app/api/diagnose/route.ts — backend inference API: OCR (Vision API) → NLP (Gemini) → embed (Vertex AI) → rank.
-    - app/dashboard/diagnose/page.tsx — frontend UI: upload zone + symptom text mode, pipeline animation, ranked results cards.
-    - Diagnose added to dashboard nav and home page card grid.
+    - app/patient/diagnose/page.tsx — frontend UI: upload zone + symptom text mode, pipeline animation, ranked results cards.
+    - Diagnose added to patient nav and home page card grid.
 
 [PHASE 2]
 - Auth overhaul:

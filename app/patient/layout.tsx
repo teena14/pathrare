@@ -8,17 +8,17 @@ import { useEffect } from 'react';
 
 // ── 5 constant tabs — always shown ───────────────────────────────────────────
 const NAV = [
-  { name: 'Diagnose',         href: '/dashboard/diagnose',       icon: Microscope    },
-  { name: 'Life Assist',      href: '/patient/life-assist',      icon: HeartHandshake},
-  { name: 'Care',             href: '/patient/care',             icon: HeartPulse    },
-  { name: 'Community',        href: '/patient/community',        icon: Users         },
-  { name: 'Clinical Profile', href: '/patient/clinical-profile', icon: Activity      },
+  { name: 'Diagnose', href: '/patient/diagnose', icon: Microscope },
+  { name: 'Life Assist', href: '/patient/life-assist', icon: HeartHandshake },
+  { name: 'Care', href: '/patient/care', icon: HeartPulse },
+  { name: 'Community', href: '/patient/community', icon: Users },
+  { name: 'Clinical Profile', href: '/patient/clinical-profile', icon: Activity },
 ];
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
-  const pathname  = usePathname();
+  const pathname = usePathname();
   const { signOut, profile, loading } = useAuth();
-  const router    = useRouter();
+  const router = useRouter();
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -44,13 +44,13 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
 
   const handleLogout = async () => { await signOut(); router.push('/auth'); };
   const initials = profile?.displayName?.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() ?? 'P';
-  const isOnTab  = pathname !== '/patient';
+  const isOnTab = pathname !== '/patient';
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-50">
 
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 border-b border-surface-200 bg-white/90 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b border-surface-200 bg-white/90 backdrop-blur-md ">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-14 gap-3">
 
@@ -70,11 +70,10 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${
-                      active
-                        ? 'bg-primary-blue text-white'
-                        : 'text-light-slate hover:bg-surface-100 hover:text-dark-slate'
-                    }`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${active
+                      ? 'bg-primary-blue text-white'
+                      : 'text-light-slate hover:bg-surface-100 hover:text-dark-slate'
+                      }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">{item.name}</span>

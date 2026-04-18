@@ -23,8 +23,8 @@ interface DiagnoseResult {
 // ── Confidence colour helper ───────────────────────────────────────────────────
 function confidenceColor(confidence: number) {
   if (confidence >= 75) return { bar: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-  if (confidence >= 50) return { bar: 'bg-amber-500',  badge: 'bg-amber-50 text-amber-700 border-amber-200' };
-  return                       { bar: 'bg-rose-400',   badge: 'bg-rose-50 text-rose-700 border-rose-200' };
+  if (confidence >= 50) return { bar: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
+  return { bar: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────

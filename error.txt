@@ -24,3 +24,5 @@
 - ERROR: life-assist/page.tsx line 65 — "Expected ',', got 'ident'"
   CAUSE: Unescaped apostrophes inside single-quoted strings (e.g. 'Doctor's ...' breaks the JS parser).
   FIX: Changed affected string literals to double-quotes (e.g. "Doctor's ...") on lines 65, 72, 79, 103, 111.
+
+-ERROR - ngo task feed not found , coordinator heatmap and tasks not found, volunteer task feed nd stats not found
