@@ -1,0 +1,36 @@
+PathRare User Flows
+
+This document details the user journeys and flows currently built into the platform.
+
+1. Authentication Flow
+- Step 1 (Role Selection): When launching the application, the user is presented with a 2x3 grid and selects 1 of 6 roles (Patient, NGO, Volunteer, Coordinator, Hospital, Doctor). 
+- Step 2 (Auth Action): The user toggles between Login or Sign-up mode. They authenticate using either Email/Password or a Google account. The flow strictly detects role conflicts to prevent mismatches.
+- Step 3 (Profile Completion): Post-authentication, the user fills out a role-specific "complete-profile" form.
+- Step 4 (Redirection): The application checks the Firestore `role` parameter and seamlessly redirects the user to their role-specific dashboard (e.g., `/patient`, `/ngo`).
+
+2. Patient User Flows
+- Primary Navigation: Patients land on `/patient`, which provides routing to primary utilities via tabs: Life Assist, Diagnostic, Clinical Profile, Community, and Care. It contains a reliable "Back to Dashboard" loop.
+- Diagnostic Flow (/patient/diagnose):
+  - The patient decides to either upload clinical documents or provide text-based symptoms directly.
+  - The backend pipeline executes OCR (via Google Vision API) if a document is uploaded, then extracts symptoms using an NLP engine (Gemini).
+  - The extracted data is matched via Vertex AI text embeddings against established Orphanet datasets.
+  - The patient receives ranked cards with matching diagnoses and inference data.
+- Life Assist Flow (/patient/life-assist):
+  - The patient chooses one of 4 categories: Financial & Legal, Adaptive Education, Medical & Care, or Assistive Technology.
+  - The patient sees a list of suggested actions ranked by a multi-factor priority score ((Urgency × 0.4) + (Risk × 0.3) + (Delay × 0.2) + (Access × 0.1)).
+  - Behind the scenes, the request goes through a 4-tier allocation engine (Tier 1: Volunteer → Tier 2: NGO → Tier 3: Self-guided → Tier 4: Queue) ensuring the user is never left at zero dead-ends and receives the best actionable path.
+
+3. Volunteer User Flow
+- Volunteer Dashboard (/volunteer): After authentication, the volunteer lands on their dashboard equipped with a match-scored prioritized task feed.
+- Action Flow: They can choose to accept specific tasks (pushed down from patient Life Assist requests), interact with the task parameters, and review their own reliability and impact statistics.
+
+4. NGO User Flow
+- NGO Dashboard (/ngo): Organization representatives land on their dashboard showing task batches that require institutional help.
+- Analytics Flow: NGOs can assess regional demand dynamics and overall organizational success statistics.
+
+5. Coordinator User Flow (ASHA / Govt / Admin)
+- Coordinator Dashboard (/coordinator): The coordinator authenticates and uses an RBAC (Role-Based Access Control) role-switcher to determine their scope (Local ASHA, Govt Official, or Admin).
+- Monitoring Flow: They interact with a Leaflet-backed heatmap rendering geographical disease clusters and demand points. They also view list representations of clusters and manage unresolved task escalations.
+
+6. Hospital & Doctor User Flows
+- Initial Workflows (/hospital, /doctor): While full features are pending, these roles navigate through the standard auth and profile-completion flows and are routed to their foundational dashboards.
