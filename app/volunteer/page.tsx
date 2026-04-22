@@ -1,102 +1,128 @@
 'use client';
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useAuth } from '@/lib/auth-context';
-import { CheckCircle, Clock, Star, Zap } from 'lucide-react';
-
-const MATCH_SCORE = (skill: number, avail: number, prox: number, rel: number, exp: number) =>
-  +(skill * 0.35 + avail * 0.25 + prox * 0.15 + rel * 0.15 + exp * 0.10).toFixed(2);
-
-const TASKS = [
-  { id: 'vt1', title: 'PM-JAY Application Assistance', patient: 'Riya S., Pune', urgency: 'Urgent', skills: ['Form Filling', 'Legal Literacy'], time: '~3 hrs', score: MATCH_SCORE(0.9, 0.8, 0.7, 0.85, 0.6) },
-  { id: 'vt2', title: 'UDID Certificate Filing',       patient: 'Arjun M., Nashik', urgency: 'High',   skills: ['Form Filling'], time: '~2 hrs', score: MATCH_SCORE(0.8, 0.9, 0.5, 0.9, 0.7) },
-  { id: 'vt3', title: 'Specialist Appointment Escort', patient: 'Priya K., Mumbai', urgency: 'Urgent', skills: ['Medical Escort'], time: '~4 hrs', score: MATCH_SCORE(0.6, 0.7, 0.9, 0.8, 0.8) },
-];
-
-const URGENCY_STYLE: Record<string, string> = {
-  Urgent: 'bg-rose-100 text-rose-700 border-rose-300',
-  High:   'bg-amber-100 text-amber-700 border-amber-300',
-  Medium: 'bg-sky-100 text-sky-700 border-sky-300',
-};
+import { LockKeyhole } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { statusTone, urgencyTone, useVolunteerDashboard } from './volunteer-dashboard-context';
+import { VolunteerSharedHeader } from './shared-header';
 
 export default function VolunteerPage() {
-  const { profile } = useAuth();
-  const name = profile?.firstName ?? profile?.displayName?.split(' ')[0] ?? 'Volunteer';
-  const [accepted, setAccepted] = useState<Set<string>>(new Set());
-
-  const stats = [
-    { label: 'Completed', val: '14', icon: CheckCircle, color: 'text-emerald-600 bg-emerald-50' },
-    { label: 'Active',    val: '1',  icon: Zap,          color: 'text-amber-600 bg-amber-50'   },
-    { label: 'Avg Rating',val: '4.8',icon: Star,         color: 'text-yellow-600 bg-yellow-50' },
-    { label: 'Hrs Given', val: '38', icon: Clock,        color: 'text-sky-600 bg-sky-50'        },
-  ];
+  const {
+    assignedTasks,
+    completeTask,
+    selectedTask,
+    setSelectedTaskId,
+    startTask,
+  } = useVolunteerDashboard();
+  const router = useRouter();
 
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-8">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="inline-block px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 mb-3">Volunteer Dashboard</div>
-        <h1 className="text-3xl font-black text-dark-slate">Welcome, {name} 👋</h1>
-        <p className="text-light-slate font-medium mt-1">Your task feed — sorted by match score.</p>
-      </motion.div>
+    <div className="mx-auto max-w-6xl space-y-8 py-8">
+      <VolunteerSharedHeader />
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        {stats.map((s, i) => {
-          const Icon = s.icon;
-          return (
-            <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-              className="bg-white rounded-2xl border border-surface-200 p-4 flex flex-col items-center gap-2">
-              <div className={`p-2 rounded-xl ${s.color}`}><Icon className="w-4 h-4" /></div>
-              <p className="text-2xl font-black text-dark-slate">{s.val}</p>
-              <p className="text-xs text-light-slate font-bold">{s.label}</p>
-            </motion.div>
-          );
-        })}
-      </div>
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.85fr]">
+        <section className="theme-card rounded-[2rem] p-6">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="theme-title-24 text-dark-slate">Assigned Work</h2>
+              <p className="theme-body mt-1 text-light-slate">These are the cases you are responsible for right now.</p>
+            </div>
+            <div className="theme-pill inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold">
+              <LockKeyhole className="h-3.5 w-3.5" />
+              One active case at a time
+            </div>
+          </div>
 
-      {/* Task feed */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-bold text-dark-slate">Suggested Tasks</h2>
-        <p className="text-xs text-light-slate font-medium -mt-2">
-          Match Score = (Skill × 0.35) + (Availability × 0.25) + (Proximity × 0.15) + (Reliability × 0.15) + (Experience × 0.10)
-        </p>
-
-        {TASKS.sort((a, b) => b.score - a.score).map((task, i) => (
-          <motion.div key={task.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-            className={`bg-white rounded-3xl border-2 p-5 transition-all duration-300 ${accepted.has(task.id) ? 'border-emerald-400 bg-emerald-50/50' : 'border-surface-200 hover:border-amber-300 hover:shadow-md'}`}>
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h3 className="font-bold text-dark-slate">{task.title}</h3>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${URGENCY_STYLE[task.urgency]}`}>{task.urgency}</span>
+          <div className="space-y-4">
+            {assignedTasks.map((task) => (
+              <div key={task.id} className="theme-soft rounded-[1.8rem] p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-bold text-dark-slate">{task.title}</h3>
+                      <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${urgencyTone(task.urgency)}`}>{task.urgency}</span>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusTone(task.status)}`}>{task.status}</span>
+                    </div>
+                    <p className="theme-body mt-2 text-light-slate">{task.summary}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-light-slate">Support type</p>
+                    <p className="mt-1 text-sm font-bold text-primary-blue">{task.assistanceType}</p>
+                  </div>
                 </div>
-                <p className="text-xs text-light-slate font-medium">{task.patient}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-2xl font-black text-dark-slate">{Math.round(task.score * 100)}<span className="text-sm text-light-slate font-bold">%</span></p>
-                <p className="text-xs text-light-slate font-bold">match</p>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2 mb-4">
-              {task.skills.map(s => <span key={s} className="px-2.5 py-1 bg-surface-100 text-light-slate text-xs font-bold rounded-lg">{s}</span>)}
-              <span className="flex items-center gap-1 px-2.5 py-1 bg-surface-100 text-light-slate text-xs font-bold rounded-lg"><Clock className="w-3 h-3" />{task.time}</span>
-            </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {task.skills.map((skill) => (
+                    <span key={skill} className="theme-pill rounded-full px-2.5 py-1 text-xs font-bold">
+                      {skill}
+                    </span>
+                  ))}
+                  <span className="theme-pill rounded-full px-2.5 py-1 text-xs font-bold">{task.estimatedTime}</span>
+                  <span className="theme-pill rounded-full px-2.5 py-1 text-xs font-bold">{task.source}</span>
+                </div>
 
-            {accepted.has(task.id) ? (
-              <div className="flex items-center gap-2 text-sm font-bold text-emerald-700">
-                <CheckCircle className="w-4 h-4" /> Task accepted — patient will be notified
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-sm font-bold text-light-slate">
+                    {task.caseLocked ? 'Case is locked to you and removed from all other volunteers.' : 'Awaiting confirmation.'}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {task.status === 'Assigned' && (
+                      <button
+                        onClick={() => {
+                          startTask(task.id);
+                          router.push('/volunteer/chat');
+                        }}
+                        className="theme-primary rounded-full px-4 py-2 text-sm font-bold"
+                      >
+                        Start task
+                      </button>
+                    )}
+                    {task.status === 'Active' && (
+                      <button
+                        onClick={() => {
+                          setSelectedTaskId(task.id);
+                          router.push('/volunteer/chat');
+                        }}
+                        className="theme-pill rounded-full px-4 py-2 text-sm font-bold"
+                      >
+                        Open chat
+                      </button>
+                    )}
+                    <button onClick={() => completeTask(task.id)} className="theme-pill rounded-full px-4 py-2 text-sm font-bold">
+                      Mark complete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-6">
+          <div className="theme-card rounded-[2rem] p-6">
+            <h2 className="theme-title-24 mb-4 text-dark-slate">Execution Rules</h2>
+            <div className="space-y-3 text-sm font-medium text-dark-slate">
+              <div className="theme-soft rounded-2xl p-4">Tasks are case-specific and should move through chat, not general messaging.</div>
+              <div className="theme-soft rounded-2xl p-4">Independent volunteers may see multiple open tasks, but only one can be worked at a time.</div>
+              <div className="theme-soft rounded-2xl p-4">NGO-linked volunteers receive assigned tasks and do not pick open tasks unless that mode is enabled.</div>
+            </div>
+          </div>
+
+          <div className="theme-card rounded-[2rem] p-6">
+            <h2 className="theme-title-24 mb-4 text-dark-slate">Immediate Next Step</h2>
+            {selectedTask ? (
+              <div className="rounded-2xl border border-brand-blue-100 bg-brand-blue-50 p-4">
+                <p className="text-sm font-black text-dark-slate">{selectedTask.title}</p>
+                <p className="theme-body mt-2 text-light-slate">
+                  {selectedTask.status === 'Assigned'
+                    ? 'Start the task to unlock case chat and begin helping the user.'
+                    : selectedTask.userNotice ?? 'Open the case chat and continue the task.'}
+                </p>
               </div>
             ) : (
-              <button onClick={() => setAccepted(prev => new Set([...prev, task.id]))}
-                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-all shadow-[0_4px_12px_rgba(245,158,11,0.3)]">
-                Accept Task
-              </button>
+              <div className="theme-soft rounded-2xl p-4 text-sm font-medium text-light-slate">No active task selected yet.</div>
             )}
-          </motion.div>
-        ))}
+          </div>
+        </section>
       </div>
     </div>
   );
