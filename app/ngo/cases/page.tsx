@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Filter } from 'lucide-react';
 import {
   availabilityTone,
@@ -15,7 +16,20 @@ export default function NgoCasesPage() {
     setAssignmentTarget,
     selectedAssignmentCase,
     assignVolunteer,
+    loading,
+    error,
   } = useNgoDashboard();
+  const [assignmentError, setAssignmentError] = useState('');
+
+  const handleAssignVolunteer = async (caseId: string, volunteerId: string) => {
+    setAssignmentError('');
+
+    try {
+      await assignVolunteer(caseId, volunteerId);
+    } catch (err: unknown) {
+      setAssignmentError(err instanceof Error ? err.message : 'Unable to assign volunteer.');
+    }
+  };
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
@@ -31,7 +45,25 @@ export default function NgoCasesPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">
+            {error}
+          </div>
+        )}
+
         <div className="space-y-4">
+          {loading && (
+            <div className="theme-soft rounded-[1.8rem] p-5 text-sm font-medium text-light-slate">
+              Loading real patient cases...
+            </div>
+          )}
+
+          {!loading && filteredCases.length === 0 && (
+            <div className="theme-soft rounded-[1.8rem] p-5 text-sm font-medium text-light-slate">
+              No real patient cases match these filters yet. Patient help requests saved in Firestore will appear here.
+            </div>
+          )}
+
           {filteredCases.map((request) => (
             <div key={request.id} className="theme-soft rounded-[1.8rem] p-5 transition-colors hover:border-brand-slate-200">
               <div className="mb-4">
@@ -49,11 +81,15 @@ export default function NgoCasesPage() {
               <p className="theme-body text-dark-slate">{request.summary}</p>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                {request.suggestedVolunteerIds.map((id) => (
+                {request.suggestedVolunteerIds.length > 0 ? request.suggestedVolunteerIds.map((id) => (
                   <span key={id} className="theme-pill rounded-full px-2.5 py-1 text-xs font-bold">
                     Suggested: {volunteerLookup.get(id)?.name ?? id}
                   </span>
-                ))}
+                )) : (
+                  <span className="theme-pill rounded-full px-2.5 py-1 text-xs font-bold">
+                    No matching available volunteer profile yet
+                  </span>
+                )}
               </div>
 
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -86,11 +122,23 @@ export default function NgoCasesPage() {
 
           {selectedAssignmentCase && (
             <div className="space-y-4">
+              {assignmentError && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">
+                  {assignmentError}
+                </div>
+              )}
+
               <div className="theme-soft rounded-2xl p-4">
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-light-slate">Selected case</p>
                 <p className="mt-2 text-sm font-black text-dark-slate">{selectedAssignmentCase.title}</p>
                 <p className="mt-1 text-xs font-medium text-light-slate">{selectedAssignmentCase.needType} · {selectedAssignmentCase.district}</p>
               </div>
+
+              {selectedAssignmentCase.suggestedVolunteerIds.length === 0 && (
+                <div className="theme-soft rounded-2xl p-4 text-sm font-medium text-light-slate">
+                  No available volunteer matches this case yet. Add a volunteer profile with matching skills or location to assign it.
+                </div>
+              )}
 
               {selectedAssignmentCase.suggestedVolunteerIds.map((volunteerId) => {
                 const volunteer = volunteerLookup.get(volunteerId);
@@ -113,7 +161,7 @@ export default function NgoCasesPage() {
                       ))}
                     </div>
                     <button
-                      onClick={() => assignVolunteer(selectedAssignmentCase.id, volunteer.id)}
+                      onClick={() => handleAssignVolunteer(selectedAssignmentCase.id, volunteer.id)}
                       disabled={volunteer.availability !== 'Available'}
                       className="theme-primary mt-4 w-full rounded-full px-4 py-2 text-sm font-bold disabled:bg-brand-slate-100 disabled:text-light-slate disabled:shadow-none"
                     >

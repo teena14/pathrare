@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -43,6 +44,10 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function normalizeEmail(emailAddr: string) {
+  return emailAddr.trim().toLowerCase();
+}
+
 export default function AuthPage() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isLogin, setIsLogin] = useState(false);
@@ -57,7 +62,7 @@ export default function AuthPage() {
     const ref = doc(db, 'users', uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
-      await setDoc(ref, { uid, email: userEmail, role, isProfileComplete: false, createdAt: new Date().toISOString() });
+      await setDoc(ref, { uid, email: userEmail ? normalizeEmail(userEmail) : null, role, isProfileComplete: false, createdAt: new Date().toISOString() });
     }
     return snap.exists() ? snap.data() : null;
   };
@@ -79,6 +84,13 @@ export default function AuthPage() {
       return;
     }
     const { isProfileComplete, role } = snap.data();
+
+    if (role !== selectedRole) {
+      await firebaseSignOut(auth);
+      setError(`This email is registered as a ${formatRole(role)}. Please choose ${formatRole(role)} or use a different email for ${formatRole(selectedRole!)}.`);
+      return;
+    }
+
     if (!isProfileComplete) router.push('/auth/complete-profile');
     else router.push(getRoleDashboard(role));
   };
@@ -93,13 +105,15 @@ export default function AuthPage() {
       router.push('/auth/complete-profile');
     } catch (err: unknown) {
       if (getErrorCode(err) === 'auth/email-already-in-use') {
-        const existingRole = await checkEmailRoleConflict(email);
+        const existingRole = await checkEmailRoleConflict(normalizeEmail(email));
         if (existingRole === selectedRole) {
-          setError('An account with this email already exists. Switch to Login.');
+          setIsLogin(true);
+          setError('An account with this email already exists. Please log in with the same password, or use Continue with Google if that is how you created it.');
         } else if (existingRole) {
           setError(`This email is registered as a ${formatRole(existingRole)}. Please use a different email.`);
         } else {
-          setError('This email is already in use.');
+          setIsLogin(true);
+          setError('An account with this email already exists, but its PathRare profile is missing. Log in with the original password to reconnect it, or use Continue with Google if it was a Google account.');
         }
       } else {
         setError(getErrorMessage(err, 'Sign up failed. Please try again.'));
@@ -118,8 +132,18 @@ export default function AuthPage() {
     } catch (err: unknown) {
       const errorCode = getErrorCode(err);
 
-      if (errorCode === 'auth/user-not-found' || errorCode === 'auth/invalid-credential') {
+      if (errorCode === 'auth/user-not-found') {
         setError('No account found with these credentials. Please Sign Up first.');
+      } else if (errorCode === 'auth/invalid-credential') {
+        const existingRole = await checkEmailRoleConflict(normalizeEmail(email));
+
+        if (existingRole === selectedRole) {
+          setError('This account exists, but the password does not match. Try the correct password or Continue with Google if this account was created with Google.');
+        } else if (existingRole) {
+          setError(`This email is registered as a ${formatRole(existingRole)}. Please choose ${formatRole(existingRole)} instead of ${formatRole(selectedRole!)}.`);
+        } else {
+          setError('We could not sign in with that email and password. If sign-up says this email already exists, try the original password or Continue with Google.');
+        }
       } else if (errorCode === 'auth/wrong-password') {
         setError('Incorrect password. Please try again.');
       } else {

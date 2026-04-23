@@ -13,6 +13,9 @@ export type HeatCluster = {
   topNeed: string;
   lat: number;
   lng: number;
+  activeCases?: number;
+  supportGapScore?: number;
+  recencyScore?: number;
 };
 
 function intensityToColor(intensity: number) {
@@ -36,6 +39,11 @@ export default function NgoHeatMap({ clusters }: { clusters: HeatCluster[] }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {clusters.length === 0 && (
+          <div className="leaflet-top leaflet-left z-[500] m-4 rounded-2xl bg-white/95 p-4 text-sm font-bold text-slate-600 shadow">
+            No mapped patient requests yet.
+          </div>
+        )}
         {clusters.map((cluster) => (
           <CircleMarker
             key={cluster.id}
@@ -52,7 +60,8 @@ export default function NgoHeatMap({ clusters }: { clusters: HeatCluster[] }) {
               <div className="space-y-1">
                 <p className="text-sm font-bold">{cluster.district}</p>
                 <p className="text-xs text-slate-600">{cluster.region}</p>
-                <p className="text-xs">Intensity: {cluster.intensity}%</p>
+                <p className="text-xs">Need Score: {cluster.intensity}</p>
+                {typeof cluster.activeCases === 'number' && <p className="text-xs">Active cases: {cluster.activeCases}</p>}
                 <p className="text-xs">Unmet needs: {cluster.unmetNeeds}</p>
                 <p className="text-xs">Urgent cases: {cluster.urgentCases}</p>
                 <p className="text-xs">Top need: {cluster.topNeed}</p>

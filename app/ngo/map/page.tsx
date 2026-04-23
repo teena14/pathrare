@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { Activity, BriefcaseMedical, FileText, HandCoins } from 'lucide-react';
-import { DEMAND_CLUSTERS, FILTER_OPTIONS, useNgoDashboard } from '../ngo-dashboard-context';
+import { useNgoDashboard } from '../ngo-dashboard-context';
 
 const NgoHeatMap = dynamic(() => import('../NgoHeatMap'), { ssr: false });
 
@@ -14,6 +14,10 @@ export default function NgoMapPage() {
     setSelectedGeography,
     setSelectedNeedType,
     setSelectedUrgency,
+    demandClusters,
+    filterOptions,
+    categoryBreakdown,
+    unmetNeeds,
   } = useNgoDashboard();
 
   return (
@@ -26,17 +30,17 @@ export default function NgoMapPage() {
           </div>
           <div className="grid min-w-[320px] grid-cols-3 gap-2">
             <select value={selectedGeography} onChange={(e) => setSelectedGeography(e.target.value)} className="rounded-2xl border border-brand-slate-100 bg-white px-3 py-2 text-sm font-medium text-dark-slate">
-              {FILTER_OPTIONS.geography.map((option) => <option key={option}>{option}</option>)}
+              {filterOptions.geography.map((option) => <option key={option}>{option}</option>)}
             </select>
             <select value={selectedUrgency} onChange={(e) => setSelectedUrgency(e.target.value)} className="rounded-2xl border border-brand-slate-100 bg-white px-3 py-2 text-sm font-medium text-dark-slate">
-              {FILTER_OPTIONS.urgency.map((option) => <option key={option}>{option}</option>)}
+              {filterOptions.urgency.map((option) => <option key={option}>{option}</option>)}
             </select>
             <select value={selectedNeedType} onChange={(e) => setSelectedNeedType(e.target.value)} className="rounded-2xl border border-brand-slate-100 bg-white px-3 py-2 text-sm font-medium text-dark-slate">
-              {FILTER_OPTIONS.needType.map((option) => <option key={option}>{option}</option>)}
+              {filterOptions.needType.map((option) => <option key={option}>{option}</option>)}
             </select>
           </div>
         </div>
-        <NgoHeatMap clusters={DEMAND_CLUSTERS} />
+        <NgoHeatMap clusters={demandClusters} />
       </section>
 
       <section className="space-y-6">
@@ -44,12 +48,13 @@ export default function NgoMapPage() {
           <h2 className="theme-title-24 mb-4 text-dark-slate">Need Split by Type</h2>
           <div className="space-y-4">
             {[
-              { label: 'Medical support', count: 7, icon: BriefcaseMedical, color: 'text-rose-600 bg-rose-50' },
-              { label: 'Financial assistance', count: 12, icon: HandCoins, color: 'text-amber-600 bg-amber-50' },
-              { label: 'Documentation help', count: 14, icon: FileText, color: 'text-sky-600 bg-sky-50' },
-              { label: 'Care guidance', count: 9, icon: Activity, color: 'text-emerald-600 bg-emerald-50' },
+              { label: 'Medical Support', icon: BriefcaseMedical, color: 'text-rose-600 bg-rose-50' },
+              { label: 'Financial Assistance', icon: HandCoins, color: 'text-amber-600 bg-amber-50' },
+              { label: 'Documentation Help', icon: FileText, color: 'text-sky-600 bg-sky-50' },
+              { label: 'Care Guidance', icon: Activity, color: 'text-emerald-600 bg-emerald-50' },
             ].map((item) => {
               const Icon = item.icon;
+              const count = categoryBreakdown.find((entry) => entry.label === item.label)?.count ?? 0;
               return (
                 <div key={item.label} className="theme-soft flex items-center gap-3 rounded-2xl p-4">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${item.color}`}>
@@ -59,7 +64,7 @@ export default function NgoMapPage() {
                     <p className="text-sm font-bold text-dark-slate">{item.label}</p>
                     <p className="text-xs font-medium text-light-slate">Cases currently waiting for this intervention.</p>
                   </div>
-                  <p className="text-2xl font-black text-dark-slate">{item.count}</p>
+                  <p className="text-2xl font-black text-dark-slate">{count}</p>
                 </div>
               );
             })}
@@ -70,14 +75,19 @@ export default function NgoMapPage() {
           <h2 className="theme-title-24 mb-4 text-dark-slate">Insight Highlights</h2>
           <div className="space-y-3">
             {[
-              'Pune and Aurangabad continue to show unresolved documentation bottlenecks.',
-              'Mumbai financial support demand is rising faster than volunteer allocation.',
-              'Nagpur medical support requests are lower volume but stay unresolved longer.',
-            ].map((insight) => (
+              demandClusters[0] ? `${demandClusters[0].district} currently has the highest composite Need Score (${demandClusters[0].intensity}).` : null,
+              unmetNeeds > 0 ? `${unmetNeeds} active case${unmetNeeds === 1 ? '' : 's'} are unassigned or waiting for support.` : null,
+              categoryBreakdown[0] ? `${categoryBreakdown[0].label} is the largest active support category.` : null,
+            ].filter(Boolean).map((insight) => (
               <div key={insight} className="theme-soft rounded-2xl p-4 text-sm font-medium text-dark-slate">
                 {insight}
               </div>
             ))}
+            {demandClusters.length === 0 && categoryBreakdown.length === 0 && (
+              <div className="theme-soft rounded-2xl p-4 text-sm font-medium text-light-slate">
+                No mapped patient requests yet. Add patient district/city and request help to populate the heatmap.
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -1,18 +1,24 @@
 'use client';
 
 import { FileText, Globe2, HandCoins } from 'lucide-react';
+import { useNgoDashboard } from '../ngo-dashboard-context';
 
 export default function NgoImpactPage() {
+  const { categoryBreakdown, demandClusters, effectiveness, unmetNeeds } = useNgoDashboard();
+  const topCategory = categoryBreakdown[0];
+  const topCluster = demandClusters[0];
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
       <section className="theme-card rounded-[2rem] p-6">
         <h1 className="theme-heading-40 mb-5 text-dark-slate">Trend & Utilization Signals</h1>
         <div className="space-y-4">
           {[
-            { title: 'Frequently unmet needs', body: 'Documentation help remains the most repeated unresolved category across Pune and Aurangabad.', icon: FileText },
-            { title: 'Underutilized schemes', body: 'Existing grant pathways for emergency medication are not being activated early enough in Mumbai.', icon: HandCoins },
-            { title: 'Repeated regional demand', body: 'North Maharashtra keeps surfacing follow-up navigation requests after hospital discharge.', icon: Globe2 },
-          ].map((item) => {
+            topCategory ? { title: 'Frequently unmet needs', body: `${topCategory.label} is currently ${topCategory.percent}% of active patient requests.`, icon: FileText } : null,
+            unmetNeeds > 0 ? { title: 'Support availability gap', body: `${unmetNeeds} active case${unmetNeeds === 1 ? '' : 's'} are still unassigned.`, icon: HandCoins } : null,
+            topCluster ? { title: 'Repeated regional demand', body: `${topCluster.district} has the strongest composite Need Score based on volume, urgency, support gap, and recency.`, icon: Globe2 } : null,
+          ].filter(Boolean).map((item) => {
+            if (!item) return null;
             const Icon = item.icon;
             return (
               <div key={item.title} className="theme-soft rounded-[1.8rem] p-5">
@@ -28,6 +34,11 @@ export default function NgoImpactPage() {
               </div>
             );
           })}
+          {!topCategory && unmetNeeds === 0 && !topCluster && (
+            <div className="theme-soft rounded-[1.8rem] p-5 text-sm font-medium text-light-slate">
+              Trend signals will appear once real patients request assistance.
+            </div>
+          )}
         </div>
       </section>
 
@@ -36,9 +47,9 @@ export default function NgoImpactPage() {
           <h2 className="theme-title-24 mb-4 text-dark-slate">Effectiveness Snapshot</h2>
           <div className="space-y-4">
             {[
-              { label: 'Cases resolved this month', value: '18', color: 'text-primary-blue' },
-              { label: 'Avg. response to urgent case', value: '2.4 hrs', color: 'text-primary-blue' },
-              { label: 'Cases still unresolved after 7 days', value: '6', color: 'text-light-slate' },
+              { label: 'Cases resolved this month', value: String(effectiveness.resolvedThisMonth), color: 'text-primary-blue' },
+              { label: 'Avg. response to urgent case', value: effectiveness.averageUrgentResponse, color: 'text-primary-blue' },
+              { label: 'Cases still unresolved after 7 days', value: String(effectiveness.unresolvedAfterSevenDays), color: 'text-light-slate' },
             ].map((item) => (
               <div key={item.label} className="theme-soft flex items-center justify-between rounded-2xl p-4">
                 <p className="text-sm font-bold text-dark-slate">{item.label}</p>
@@ -52,14 +63,19 @@ export default function NgoImpactPage() {
           <h2 className="theme-title-24 mb-4 text-dark-slate">Action Next</h2>
           <div className="space-y-3">
             {[
-              'Expand documentation-trained volunteers in Pune.',
-              'Prioritize financial-aid triage in Mumbai this week.',
-              'Review unresolved care-navigation cases older than 7 days.',
-            ].map((item) => (
+              topCluster ? `Prioritize outreach in ${topCluster.district}; it has the highest Need Score.` : null,
+              topCategory ? `Recruit or assign volunteers for ${topCategory.label}.` : null,
+              effectiveness.unresolvedAfterSevenDays > 0 ? `Review ${effectiveness.unresolvedAfterSevenDays} case${effectiveness.unresolvedAfterSevenDays === 1 ? '' : 's'} older than 7 days.` : null,
+            ].filter(Boolean).map((item) => (
               <div key={item} className="theme-soft rounded-2xl p-4 text-sm font-medium text-dark-slate">
                 {item}
               </div>
             ))}
+            {!topCluster && !topCategory && effectiveness.unresolvedAfterSevenDays === 0 && (
+              <div className="theme-soft rounded-2xl p-4 text-sm font-medium text-light-slate">
+                No recommended actions yet.
+              </div>
+            )}
           </div>
         </div>
       </section>

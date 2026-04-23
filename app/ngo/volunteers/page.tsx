@@ -1,9 +1,11 @@
 'use client';
 
 import { Users } from 'lucide-react';
-import { availabilityTone, VOLUNTEERS } from '../ngo-dashboard-context';
+import { availabilityTone, useNgoDashboard } from '../ngo-dashboard-context';
 
 export default function NgoVolunteersPage() {
+  const { volunteers, loading, error } = useNgoDashboard();
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1.25fr_0.9fr]">
       <section className="theme-card rounded-[2rem] p-6">
@@ -14,12 +16,30 @@ export default function NgoVolunteersPage() {
           </div>
           <div className="theme-pill inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold">
             <Users className="h-3.5 w-3.5" />
-            {VOLUNTEERS.length} linked volunteers
+            {volunteers.length} linked volunteers
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">
+            {error}
+          </div>
+        )}
+
         <div className="space-y-4">
-          {VOLUNTEERS.map((volunteer) => (
+          {loading && (
+            <div className="theme-soft rounded-[1.8rem] p-5 text-sm font-medium text-light-slate">
+              Loading real volunteer profiles...
+            </div>
+          )}
+
+          {!loading && volunteers.length === 0 && (
+            <div className="theme-soft rounded-[1.8rem] p-5 text-sm font-medium text-light-slate">
+              No volunteer users are registered yet. Volunteers will appear here after they sign up and complete their profile.
+            </div>
+          )}
+
+          {volunteers.map((volunteer) => (
             <div key={volunteer.id} className="theme-soft rounded-[1.8rem] p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -45,15 +65,15 @@ export default function NgoVolunteersPage() {
           <h2 className="theme-title-24 mb-4 text-dark-slate">Capacity Snapshot</h2>
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="rounded-2xl bg-brand-blue-50 p-4">
-              <p className="text-2xl font-black text-dark-slate">{VOLUNTEERS.filter((v) => v.availability === 'Available').length}</p>
+              <p className="text-2xl font-black text-dark-slate">{volunteers.filter((v) => v.availability === 'Available').length}</p>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-blue">Available</p>
             </div>
             <div className="rounded-2xl bg-brand-slate-50 p-4">
-              <p className="text-2xl font-black text-dark-slate">{VOLUNTEERS.filter((v) => v.availability === 'Busy').length}</p>
+              <p className="text-2xl font-black text-dark-slate">{volunteers.filter((v) => v.availability === 'Busy').length}</p>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-light-slate">Busy</p>
             </div>
             <div className="rounded-2xl bg-brand-slate-100 p-4">
-              <p className="text-2xl font-black text-dark-slate">{VOLUNTEERS.filter((v) => v.availability === 'Offline').length}</p>
+              <p className="text-2xl font-black text-dark-slate">{volunteers.filter((v) => v.availability === 'Offline').length}</p>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-light-slate">Offline</p>
             </div>
           </div>

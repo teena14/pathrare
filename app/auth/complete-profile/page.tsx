@@ -52,6 +52,12 @@ const Select = ({ className = '', ...props }: React.SelectHTMLAttributes<HTMLSel
 function PatientFields({ data, set }: { data: ExtraProfileFields; set: (k: string, v: string) => void }) {
   return (
     <>
+      <Field label="City / District">
+        <TextInput required placeholder="e.g. Pune, Mumbai, Delhi" value={String(data.location ?? '')} onChange={(e) => set('location', e.target.value)} />
+      </Field>
+      <Field label="State / Region">
+        <TextInput required placeholder="e.g. Maharashtra, Delhi NCR" value={String(data.state ?? '')} onChange={(e) => set('state', e.target.value)} />
+      </Field>
       <Field label="Diagnosis Status">
         <Select value={String(data.diagnosisStatus ?? '')} onChange={(e) => set('diagnosisStatus', e.target.value)}>
           <option value="">Select status...</option>

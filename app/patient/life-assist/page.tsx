@@ -23,7 +23,7 @@ interface Action {
 }
 
 interface Task {
-  task_id: string;
+  task_id?: string;
   type: string;
   urgency_score: number;
   required_skills: string[];
@@ -167,20 +167,11 @@ function computePriorityScore(action: Action): number {
 
 // ── Allocation Engine ─────────────────────────────────────────────────────────
 async function runAllocation(task: Task, category: string): Promise<AllocationResult> {
-  await new Promise(r => setTimeout(r, 1200));
-  const rand = Math.random();
-  if (rand > 0.6) {
-    return { tier: 1, message: 'A volunteer has been matched and will contact you within 2 hours. You can track progress on your dashboard.' };
+  if (task.fallback_strategy.includes('ngo')) {
+    return { tier: 2, message: 'Your request has been saved and routed to the NGO queue. A partner organization can now review it from the NGO dashboard.' };
   }
-  await new Promise(r => setTimeout(r, 1000));
-  if (rand > 0.3) {
-    return { tier: 2, message: 'No volunteer was immediately available. We\'ve routed your request to a partner NGO — they\'ll reach out within 24 hours.' };
-  }
-  await new Promise(r => setTimeout(r, 800));
-  if (rand > 0.1) {
-    return { tier: 3, message: 'Here\'s what you can do right now, step by step:', steps: SELF_STEPS[category] };
-  }
-  return { tier: 4, message: 'We\'ve queued your request and will notify you as soon as a resource becomes available. You\'re not alone in this.' };
+
+  return { tier: 3, message: 'Here are self-guided steps you can use while support capacity is being arranged:', steps: SELF_STEPS[category] };
 }
 
 // ── Tier indicator component ──────────────────────────────────────────────────
@@ -235,7 +226,6 @@ export default function LifeAssistPage() {
     setAllocationTier(1);
 
     const task: Task = {
-      task_id: `task_${Date.now()}`,
       type: action.id,
       urgency_score: action.urgencyScore,
       required_skills: action.skills,
@@ -248,7 +238,13 @@ export default function LifeAssistPage() {
       await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...task, userId: profile?.uid, category }),
+        body: JSON.stringify({
+          ...task,
+          userId: profile?.uid,
+          category,
+          title: action.title,
+          summary: action.why,
+        }),
       });
     } catch { /* silent — UI never blocks */ }
 
@@ -481,7 +477,7 @@ export default function LifeAssistPage() {
             {allocationResult.tier <= 2 && (
               <div className="flex items-center gap-2 p-3 bg-surface-50 rounded-2xl border border-surface-200">
                 <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="text-xs text-light-slate font-medium">If you don't hear back within the expected time, we'll automatically escalate your request.</span>
+                <span className="text-xs text-light-slate font-medium">If you don&apos;t hear back within the expected time, we&apos;ll automatically escalate your request.</span>
               </div>
             )}
 
