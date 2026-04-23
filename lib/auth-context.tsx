@@ -17,6 +17,7 @@ interface UserProfile {
   displayName: string | null;
   role: string | null;
   isProfileComplete: boolean;
+  joinedCircles?: string[];
 }
 
 interface AuthContextType {
@@ -47,13 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userDoc.exists()) {
           setProfile(userDoc.data() as UserProfile);
         } else {
-          // If a user signs in but doesn't exist in DB, create placeholder
           const baseProfile: UserProfile = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             displayName: firebaseUser.displayName,
             role: null,
-            isProfileComplete: false
+            isProfileComplete: false,
+            joinedCircles: []
           };
           await setDoc(userDocRef, baseProfile);
           setProfile(baseProfile);
