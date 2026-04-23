@@ -1,5 +1,5 @@
 - Next.js scaffolding with Tailwind CSS.
-- Basic Authentication UI scaffolding with 5 roles.
+- Basic Authentication UI scaffolding with 3 roles.
 - Basic Dashboard layout routing to 4 tabs.
 - Two-step auth flow: role selection is a mandatory first step before login/signup form is shown.
 - Firebase Authentication: Email/Password + Google Sign-In with Firestore user document creation.
@@ -17,16 +17,15 @@
 
 [PHASE 2]
 - Auth overhaul:
-    - 6 role cards in 2×3 grid (added Coordinator: ASHA/Govt/Admin).
+    - 3 role cards for Patient, NGO, and Volunteer.
     - Strict sign-up vs login distinction with role-conflict detection.
     - Google button labels: "Sign up with Google" vs "Login with Google" per mode.
-    - Role-specific complete-profile forms (patient/ngo/volunteer/coordinator/hospital/doctor).
+    - Role-specific complete-profile forms (patient/ngo/volunteer).
     - Post-auth routing to role-specific dashboard based on Firestore role field.
 - Role-specific dashboards:
     - /patient — home, life-assist, clinical-profile, community, care tabs.
     - /ngo — task batch, demand by region, stats.
     - /volunteer — match-scored task feed, accept interaction, reliability stats.
-    - /coordinator — RBAC role-switcher (ASHA/Govt/Admin), Leaflet heatmap, cluster list, unresolved escalation.
 - Life Assist engine (/patient/life-assist):
     - 4 categories: Financial & Legal, Adaptive Education, Medical & Care, Assistive Technology.
     - Ranked actions by priority score: (Urgency×0.4)+(Risk×0.3)+(Delay×0.2)+(Access×0.1).
@@ -36,4 +35,3 @@
     - /api/tasks — create/get structured task objects.
     - /api/allocate — 4-tier allocation engine with priority scoring.
 - /dashboard deprecated: now redirects to role-specific route.
-- Leaflet heatmap installed and integrated in coordinator dashboard.

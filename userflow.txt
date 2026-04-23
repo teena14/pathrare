@@ -3,7 +3,7 @@ PathRare User Flows
 This document details the user journeys and flows currently built into the platform.
 
 1. Authentication Flow
-- Step 1 (Role Selection): When launching the application, the user is presented with a 2x3 grid and selects 1 of 6 roles (Patient, NGO, Volunteer, Coordinator, Hospital, Doctor). 
+- Step 1 (Role Selection): When launching the application, the user selects 1 of 3 roles (Patient, NGO, Volunteer). 
 - Step 2 (Auth Action): The user toggles between Login or Sign-up mode. They authenticate using either Email/Password or a Google account. The flow strictly detects role conflicts to prevent mismatches.
 - Step 3 (Profile Completion): Post-authentication, the user fills out a role-specific "complete-profile" form.
 - Step 4 (Redirection): The application checks the Firestore `role` parameter and seamlessly redirects the user to their role-specific dashboard (e.g., `/patient`, `/ngo`).
@@ -27,10 +27,3 @@ This document details the user journeys and flows currently built into the platf
 4. NGO User Flow
 - NGO Dashboard (/ngo): Organization representatives land on their dashboard showing task batches that require institutional help.
 - Analytics Flow: NGOs can assess regional demand dynamics and overall organizational success statistics.
-
-5. Coordinator User Flow (ASHA / Govt / Admin)
-- Coordinator Dashboard (/coordinator): The coordinator authenticates and uses an RBAC (Role-Based Access Control) role-switcher to determine their scope (Local ASHA, Govt Official, or Admin).
-- Monitoring Flow: They interact with a Leaflet-backed heatmap rendering geographical disease clusters and demand points. They also view list representations of clusters and manage unresolved task escalations.
-
-6. Hospital & Doctor User Flows
-- Initial Workflows (/hospital, /doctor): While full features are pending, these roles navigate through the standard auth and profile-completion flows and are routed to their foundational dashboards.

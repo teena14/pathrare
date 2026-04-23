@@ -18,9 +18,6 @@ function getRoleDashboard(role: string): string {
     patient: '/patient',
     ngo: '/ngo',
     volunteer: '/volunteer',
-    coordinator: '/coordinator',
-    hospital: '/hospital',
-    doctor: '/doctor',
   };
   return map[role] ?? '/auth';
 }
@@ -29,9 +26,6 @@ const roleLabels: Record<string, string> = {
   patient: 'Patient',
   ngo: 'NGO',
   volunteer: 'Volunteer',
-  coordinator: 'Coordinator',
-  hospital: 'Hospital',
-  doctor: 'Doctor',
 };
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -160,62 +154,6 @@ function VolunteerFields({ data, set }: { data: ExtraProfileFields; set: (k: str
   );
 }
 
-function CoordinatorFields({ data, set }: { data: ExtraProfileFields; set: (k: string, v: string) => void }) {
-  return (
-    <>
-      <Field label="Coordinator Role">
-        <Select required value={String(data.subRole ?? '')} onChange={(e) => set('subRole', e.target.value)}>
-          <option value="">Select role...</option>
-          <option value="asha">ASHA / Social Worker</option>
-          <option value="government">Government Official</option>
-          <option value="admin">Platform Admin</option>
-        </Select>
-      </Field>
-      <Field label="District / Region">
-        <TextInput required placeholder="Your district or region" value={String(data.district ?? '')} onChange={(e) => set('district', e.target.value)} />
-      </Field>
-      <Field label="Jurisdiction / Department">
-        <TextInput placeholder="e.g. Health Dept, Block PHC" value={String(data.jurisdiction ?? '')} onChange={(e) => set('jurisdiction', e.target.value)} />
-      </Field>
-    </>
-  );
-}
-
-function HospitalFields({ data, set }: { data: ExtraProfileFields; set: (k: string, v: string) => void }) {
-  return (
-    <>
-      <Field label="Hospital Name">
-        <TextInput required placeholder="Legal hospital name" value={String(data.hospitalName ?? '')} onChange={(e) => set('hospitalName', e.target.value)} />
-      </Field>
-      <Field label="Registration Number">
-        <TextInput placeholder="Hospital registration number" value={String(data.regNumber ?? '')} onChange={(e) => set('regNumber', e.target.value)} />
-      </Field>
-      <Field label="Specialization">
-        <TextInput placeholder="e.g. Rare Diseases, Pediatrics" value={String(data.specialization ?? '')} onChange={(e) => set('specialization', e.target.value)} />
-      </Field>
-      <Field label="Bed Count">
-        <TextInput type="number" placeholder="Total bed capacity" value={String(data.bedCount ?? '')} onChange={(e) => set('bedCount', e.target.value)} />
-      </Field>
-    </>
-  );
-}
-
-function DoctorFields({ data, set }: { data: ExtraProfileFields; set: (k: string, v: string) => void }) {
-  return (
-    <>
-      <Field label="Medical Specialization">
-        <TextInput required placeholder="e.g. Genetic Medicine, Neurology" value={String(data.specialization ?? '')} onChange={(e) => set('specialization', e.target.value)} />
-      </Field>
-      <Field label="Medical Licence Number">
-        <TextInput required placeholder="MCI/NMC licence number" value={String(data.licenceNumber ?? '')} onChange={(e) => set('licenceNumber', e.target.value)} />
-      </Field>
-      <Field label="Hospital Affiliation">
-        <TextInput placeholder="Primary hospital name" value={String(data.hospitalAffiliation ?? '')} onChange={(e) => set('hospitalAffiliation', e.target.value)} />
-      </Field>
-    </>
-  );
-}
-
 function getInitialNameParts(displayName: string | null | undefined) {
   const trimmed = displayName?.trim() ?? '';
   if (!trimmed) {
@@ -238,41 +176,30 @@ function getErrorMessage(error: unknown) {
 
 export default function CompleteProfilePage() {
   const router = useRouter();
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [country, setCountry] = useState('India');
+  const [country, setCountry] = useState('');
   const [extra, setExtra] = useState<ExtraProfileFields>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const role = profile?.role ?? null;
   const initialNameParts = useMemo(() => getInitialNameParts(profile?.displayName ?? user?.displayName), [profile?.displayName, user?.displayName]);
+  const profileDefaults = useMemo(() => {
+    const profileRecord = profile as Record<string, unknown> | null;
+    const defaults = {
+      firstName: String(profileRecord?.firstName ?? initialNameParts.firstName),
+      lastName: String(profileRecord?.lastName ?? initialNameParts.lastName),
+      country: String(profileRecord?.country ?? 'India'),
+      extra: {} as ExtraProfileFields,
+    };
 
-  useEffect(() => {
-    if (!user && !authLoading) {
-      router.replace('/auth');
-    }
-  }, [authLoading, router, user]);
-
-  useEffect(() => {
-    if (!profile) {
-      return;
-    }
-
-    setFirstName((current) => current || String((profile as Record<string, unknown>).firstName ?? initialNameParts.firstName));
-    setLastName((current) => current || String((profile as Record<string, unknown>).lastName ?? initialNameParts.lastName));
-    setCountry((current) => current || String((profile as Record<string, unknown>).country ?? 'India'));
-
-    setExtra((current) => {
-      if (Object.keys(current).length > 0) {
-        return current;
-      }
-
+    if (profileRecord) {
       const next: ExtraProfileFields = {};
       const excludedKeys = new Set(['uid', 'email', 'displayName', 'role', 'isProfileComplete', 'createdAt', 'firstName', 'lastName', 'country']);
 
-      Object.entries(profile as Record<string, unknown>).forEach(([key, value]) => {
+      Object.entries(profileRecord).forEach(([key, value]) => {
         if (excludedKeys.has(key) || value == null) {
           return;
         }
@@ -285,9 +212,21 @@ export default function CompleteProfilePage() {
         next[key] = String(value);
       });
 
-      return next;
-    });
+      defaults.extra = next;
+    }
+
+    return defaults;
   }, [initialNameParts.firstName, initialNameParts.lastName, profile]);
+  const effectiveFirstName = firstName || profileDefaults.firstName;
+  const effectiveLastName = lastName || profileDefaults.lastName;
+  const effectiveCountry = country || profileDefaults.country;
+  const effectiveExtra = { ...profileDefaults.extra, ...extra };
+
+  useEffect(() => {
+    if (!user && !authLoading) {
+      router.replace('/auth');
+    }
+  }, [authLoading, router, user]);
 
   const setField = (key: string, value: string) => {
     const multiSelectFields: MultiSelectKey[] = ['focusAreas', 'skills'];
@@ -317,22 +256,23 @@ export default function CompleteProfilePage() {
 
     try {
       await updateDoc(doc(db, 'users', user.uid), {
-        firstName,
-        lastName,
-        country,
-        displayName: `${firstName} ${lastName}`.trim(),
+        firstName: effectiveFirstName,
+        lastName: effectiveLastName,
+        country: effectiveCountry,
+        displayName: `${effectiveFirstName} ${effectiveLastName}`.trim(),
         isProfileComplete: true,
-        ...extra,
+        ...effectiveExtra,
       });
 
-      router.push(getRoleDashboard(role));
+      const refreshedProfile = await refreshProfile();
+      router.replace(getRoleDashboard(refreshedProfile?.role ?? role));
     } catch (err: unknown) {
       setError(getErrorMessage(err));
       setLoading(false);
     }
   };
 
-  if (authLoading || !user || !role) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-surface-50">
         <motion.div
@@ -345,6 +285,30 @@ export default function CompleteProfilePage() {
           </div>
           <h1 className="text-2xl font-bold mb-2 text-dark-slate">Preparing your profile</h1>
           <p className="text-light-slate font-medium">We&apos;re loading the form for your selected role.</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-surface-50">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-lg glass bg-white p-8 rounded-[2rem] shadow-xl border border-surface-200 text-center"
+        >
+          <div className="inline-block px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-xs font-bold mb-4">
+            Profile needs attention
+          </div>
+          <h1 className="text-2xl font-bold mb-2 text-dark-slate">Role was not saved</h1>
+          <p className="text-light-slate font-medium mb-6">Please return to signup and choose Patient, NGO, or Volunteer again.</p>
+          <button
+            onClick={() => router.replace('/auth')}
+            className="bg-primary-blue hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-full transition-all"
+          >
+            Back to signup
+          </button>
         </motion.div>
       </div>
     );
@@ -379,10 +343,10 @@ export default function CompleteProfilePage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <Field label="First Name">
-              <TextInput required placeholder="First" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <TextInput required placeholder="First" value={effectiveFirstName} onChange={(e) => setFirstName(e.target.value)} />
             </Field>
             <Field label="Last Name">
-              <TextInput required placeholder="Last" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              <TextInput required placeholder="Last" value={effectiveLastName} onChange={(e) => setLastName(e.target.value)} />
             </Field>
           </div>
 
@@ -391,7 +355,7 @@ export default function CompleteProfilePage() {
           </Field>
 
           <Field label="Country">
-            <Select value={country} onChange={(e) => setCountry(e.target.value)}>
+            <Select value={effectiveCountry} onChange={(e) => setCountry(e.target.value)}>
               <option>India</option>
               <option>United States</option>
               <option>United Kingdom</option>
@@ -402,12 +366,9 @@ export default function CompleteProfilePage() {
           </Field>
 
           <div className="pt-2 border-t border-surface-100 space-y-5">
-            {role === 'patient' && <PatientFields data={extra} set={setField} />}
-            {role === 'ngo' && <NGOFields data={extra} set={setField} />}
-            {role === 'volunteer' && <VolunteerFields data={extra} set={setField} />}
-            {role === 'coordinator' && <CoordinatorFields data={extra} set={setField} />}
-            {role === 'hospital' && <HospitalFields data={extra} set={setField} />}
-            {role === 'doctor' && <DoctorFields data={extra} set={setField} />}
+            {role === 'patient' && <PatientFields data={effectiveExtra} set={setField} />}
+            {role === 'ngo' && <NGOFields data={effectiveExtra} set={setField} />}
+            {role === 'volunteer' && <VolunteerFields data={effectiveExtra} set={setField} />}
           </div>
 
           <button

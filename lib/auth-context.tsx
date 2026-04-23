@@ -36,6 +36,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   signInWithGoogle: (role: string) => Promise<GoogleSignInResult>;
+  refreshProfile: () => Promise<UserProfile | null>;
   signOut: () => Promise<void>;
   updateProfileRole: (role: string) => Promise<void>;
 }
@@ -50,12 +51,6 @@ function getRoleDashboard(role: string | null): string {
       return '/ngo';
     case 'volunteer':
       return '/volunteer';
-    case 'coordinator':
-      return '/coordinator';
-    case 'hospital':
-      return '/hospital';
-    case 'doctor':
-      return '/doctor';
     default:
       return '/auth';
   }
@@ -77,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userDoc.exists()) {
           setProfile(userDoc.data() as UserProfile);
         } else {
-          setProfile(null);
+          setProfile((prev) => prev?.uid === firebaseUser.uid ? prev : null);
         }
       } else {
         setProfile(null);
@@ -147,6 +142,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
+  const refreshProfile = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setProfile(null);
+      return null;
+    }
+
+    const userDocRef = doc(db, 'users', currentUser.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+      setProfile(null);
+      return null;
+    }
+
+    const nextProfile = userDoc.data() as UserProfile;
+    setProfile(nextProfile);
+    return nextProfile;
+  };
+
   const updateProfileRole = async (role: string) => {
     if (!user) return;
     const userDocRef = doc(db, 'users', user.uid);
@@ -159,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, signOut, updateProfileRole }}>
+    <AuthContext.Provider value={{ user, profile, loading, signInWithGoogle, refreshProfile, signOut, updateProfileRole }}>
       {children}
     </AuthContext.Provider>
   );

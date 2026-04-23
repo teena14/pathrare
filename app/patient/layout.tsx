@@ -27,8 +27,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
     if (!profile.isProfileComplete) { router.replace('/auth/complete-profile'); return; }
     if (profile.role && profile.role !== 'patient') {
       const roleMap: Record<string, string> = {
-        ngo: '/ngo', volunteer: '/volunteer', coordinator: '/coordinator',
-        hospital: '/hospital', doctor: '/doctor',
+        ngo: '/ngo', volunteer: '/volunteer',
       };
       router.replace(roleMap[profile.role] ?? '/auth');
     }

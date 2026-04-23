@@ -26,3 +26,14 @@
   FIX: Changed affected string literals to double-quotes (e.g. "Doctor's ...") on lines 65, 72, 79, 103, 111.
 
 -ERROR - ngo task feed not found , coordinator heatmap and tasks not found, volunteer task feed nd stats not found
+
+- ERROR: Email/password signup froze on "Preparing your profile"
+  CAUSE: Firebase Auth signs the browser in before the app finishes creating the Firestore `users/{uid}` profile document. The auth provider sometimes checked Firestore during that gap, stored `profile = null`, and `/auth/complete-profile` kept waiting for `profile.role` forever.
+  FIX: Added a `refreshProfile()` method to the auth context and call it immediately after the email signup user document is created. The auth listener also avoids replacing a freshly loaded profile with `null` if an earlier Firestore read finishes late. The complete-profile page now shows a recovery message instead of an infinite loading card if a signed-in user still has no saved role.
+
+- CHANGE: Removed Hospital, Doctor, and Coordinator as selectable/authenticated roles.
+  DETAILS: The signup role list, role dashboard routing, and complete-profile role-specific forms now only support Patient, NGO, and Volunteer. The old `/coordinator` route files were removed.
+
+- ERROR: Completing the patient profile returned to the same complete-profile form
+  CAUSE: The profile save correctly wrote `isProfileComplete: true` to Firestore, but the in-memory auth context still had the older `isProfileComplete: false` profile. The patient layout guard read that stale context value and redirected back to `/auth/complete-profile`.
+  FIX: After saving the complete-profile form, the page now calls `refreshProfile()` and only then routes to the role dashboard with `router.replace(...)`.

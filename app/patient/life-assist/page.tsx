@@ -86,7 +86,7 @@ const ACTIONS: Record<string, Action[]> = {
       why: 'Children with rare diseases are entitled to free, adapted education under RTE Section 12 and RPwD Act.',
       description: 'The Right to Education Act and RPwD Act guarantee that children with disabilities receive Individualised Education Plans (IEPs) and in-school support.',
       requirements: ['Child\'s Aadhaar', 'Disability certificate', 'School admission request letter'],
-      effort: '~4 hours with coordinator assistance', skills: ['Legal Literacy', 'Counselling'], category: 'education',
+      effort: '~4 hours with volunteer assistance', skills: ['Legal Literacy', 'Counselling'], category: 'education',
     },
     {
       id: 'edu-2', title: 'Home-Based Special Education (HBE)', priority: 'medium', urgencyScore: 0.55,

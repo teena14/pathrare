@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User, Heart, Building2, Stethoscope, Users, Mail, Lock, AlertCircle, ShieldCheck
+  User, Building2, Users, Mail, Lock, AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -19,10 +19,7 @@ import { useAuth } from '@/lib/auth-context';
 const ROLES = [
   { id: 'patient', name: 'Patient', icon: User, desc: 'Find diagnosis & support.', color: 'from-blue-500 to-indigo-500' },
   { id: 'ngo', name: 'NGO', icon: Building2, desc: 'Offer structured help.', color: 'from-emerald-500 to-teal-500' },
-  { id: 'hospital', name: 'Hospital', icon: Heart, desc: 'Offer second opinions.', color: 'from-rose-500 to-pink-500' },
   { id: 'volunteer', name: 'Volunteer', icon: Users, desc: 'Guide families in need.', color: 'from-amber-500 to-orange-500' },
-  { id: 'doctor', name: 'Doctor', icon: Stethoscope, desc: 'Provide clinical guidance.', color: 'from-violet-500 to-purple-500' },
-  { id: 'coordinator', name: 'Coordinator', icon: ShieldCheck, desc: 'ASHA / Government / Admin', color: 'from-cyan-500 to-sky-500' },
 ];
 
 function getRoleDashboard(role: string | null): string {
@@ -30,9 +27,6 @@ function getRoleDashboard(role: string | null): string {
     case 'patient': return '/patient';
     case 'ngo': return '/ngo';
     case 'volunteer': return '/volunteer';
-    case 'coordinator': return '/coordinator';
-    case 'hospital': return '/hospital';
-    case 'doctor': return '/doctor';
     default: return '/auth';
   }
 }
@@ -57,7 +51,7 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, refreshProfile } = useAuth();
 
   const createUserDoc = async (uid: string, userEmail: string | null, role: string) => {
     const ref = doc(db, 'users', uid);
@@ -78,7 +72,12 @@ export default function AuthPage() {
   const routeAfterLogin = async (uid: string) => {
     const ref = doc(db, 'users', uid);
     const snap = await getDoc(ref);
-    if (!snap.exists()) { router.push('/auth/complete-profile'); return; }
+    if (!snap.exists()) {
+      await createUserDoc(uid, email, selectedRole!);
+      await refreshProfile();
+      router.push('/auth/complete-profile');
+      return;
+    }
     const { isProfileComplete, role } = snap.data();
     if (!isProfileComplete) router.push('/auth/complete-profile');
     else router.push(getRoleDashboard(role));
@@ -90,6 +89,7 @@ export default function AuthPage() {
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await createUserDoc(cred.user.uid, cred.user.email, selectedRole!);
+      await refreshProfile();
       router.push('/auth/complete-profile');
     } catch (err: unknown) {
       if (getErrorCode(err) === 'auth/email-already-in-use') {
@@ -204,7 +204,7 @@ export default function AuthPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-3 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-3 gap-4"
             >
               {ROLES.map((role) => {
                 const Icon = role.icon;
