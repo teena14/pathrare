@@ -17,6 +17,13 @@
   --color-surface-50: #F8FAFC;
   --color-surface-100: #F1F5F9;
   --color-surface-200: #E2E8F0;
+  --color-brand-blue-50: #EFF6FF;
+  --color-brand-blue-100: #DBEAFE;
+  --color-brand-blue-200: #BBD3F8;
+  --color-brand-slate-50: #F7F9FA;
+  --color-brand-slate-100: #E7EEF2;
+  --color-brand-slate-200: #C9D7DF;
+  --color-brand-steel: #7E98A8;
   
   --color-foreground: #23323D;
 }
@@ -44,5 +51,65 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-image: linear-gradient(to right, #0F5DE3, #8095F2);
+  }
+
+  .theme-page {
+    background:
+      radial-gradient(circle at 8% -10%, rgba(126, 152, 168, 0.16), transparent 30%),
+      linear-gradient(180deg, #ffffff 0%, #f7f9fa 100%);
+  }
+
+  .theme-card {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(201, 215, 223, 0.78);
+    box-shadow: 0 18px 42px rgba(35, 50, 61, 0.06);
+  }
+
+  .theme-soft {
+    background: #f7f9fa;
+    border: 1px solid #e7eef2;
+  }
+
+  .theme-pill {
+    background: #ffffff;
+    border: 1px solid #e7eef2;
+    color: #42596a;
+  }
+
+  .theme-primary {
+    background: #0f5de3;
+    color: #ffffff;
+    box-shadow: 0 12px 24px rgba(15, 93, 227, 0.16);
+  }
+
+  .theme-heading-40 {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    letter-spacing: 0;
+    font-weight: 900;
+  }
+
+  .theme-title-24 {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    letter-spacing: 0;
+    font-weight: 700;
+  }
+
+  .theme-body {
+    font-size: 14px;
+    line-height: 1.55;
+    font-weight: 500;
+  }
+
+  .ngo-map-shell .leaflet-container,
+  .ngo-map-shell .leaflet-pane,
+  .ngo-map-shell .leaflet-top,
+  .ngo-map-shell .leaflet-bottom {
+    z-index: 0;
+  }
+
+  .ngo-map-shell .leaflet-popup-pane {
+    z-index: 10;
   }
 }
