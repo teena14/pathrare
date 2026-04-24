@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FileText, LayoutDashboard, LogOut, Map, TrendingUp, Users } from 'lucide-react';
+import { FileText, HeartHandshake, LayoutDashboard, LogOut, Map, Settings, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { NgoDashboardProvider } from './ngo-dashboard-context';
 
@@ -10,6 +10,7 @@ const NGO_TABS = [
   { href: '/ngo', label: 'Overview', icon: LayoutDashboard },
   { href: '/ngo/map', label: 'Map & Insights', icon: Map },
   { href: '/ngo/cases', label: 'Cases', icon: FileText },
+  { href: '/ngo/patients', label: 'Patients', icon: HeartHandshake },
   { href: '/ngo/volunteers', label: 'Volunteers', icon: Users },
   { href: '/ngo/impact', label: 'Impact', icon: TrendingUp },
 ];
@@ -50,6 +51,10 @@ export default function NGOLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-primary-blue bg-brand-blue-50 border border-brand-blue-100 px-2.5 py-1 rounded-full">NGO</span>
+              <Link href="/auth/complete-profile" className="flex items-center gap-1.5 text-xs font-bold text-light-slate hover:text-primary-blue transition-colors">
+                <Settings className="w-3.5 h-3.5" />
+                Settings
+              </Link>
               <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs font-bold text-light-slate hover:text-primary-blue transition-colors">
                 <LogOut className="w-3.5 h-3.5" />
                 Logout

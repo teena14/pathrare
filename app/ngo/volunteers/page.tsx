@@ -1,6 +1,7 @@
 'use client';
 
 import { Users } from 'lucide-react';
+import { NgoAssociationManager } from '../association-manager';
 import { availabilityTone, useNgoDashboard } from '../ngo-dashboard-context';
 
 export default function NgoVolunteersPage() {
@@ -61,6 +62,8 @@ export default function NgoVolunteersPage() {
       </section>
 
       <section className="space-y-6">
+        <NgoAssociationManager />
+
         <div className="theme-card rounded-[2rem] p-6">
           <h2 className="theme-title-24 mb-4 text-dark-slate">Capacity Snapshot</h2>
           <div className="grid grid-cols-3 gap-3 text-center">
@@ -83,6 +86,7 @@ export default function NgoVolunteersPage() {
           <h2 className="theme-title-24 mb-4 text-dark-slate">How to Use This Tab</h2>
           <div className="space-y-3 text-sm font-medium text-dark-slate">
             <div className="theme-soft rounded-2xl p-4">Use this tab to see who can realistically take a case right now.</div>
+            <div className="theme-soft rounded-2xl p-4">A volunteer is treated as linked when your NGO ID is present in their associated_ngo_ids list.</div>
             <div className="theme-soft rounded-2xl p-4">Detailed assignment still happens in the Cases tab so action and coordination stay connected.</div>
           </div>
         </div>

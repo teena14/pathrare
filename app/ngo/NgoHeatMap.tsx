@@ -8,6 +8,7 @@ export type HeatCluster = {
   region: string;
   district: string;
   intensity: number;
+  priorityScore?: number;
   unmetNeeds: number;
   urgentCases: number;
   topNeed: string;
@@ -20,10 +21,9 @@ export type HeatCluster = {
 
 function intensityToColor(intensity: number) {
   if (intensity >= 90) return '#ef4444';
-  if (intensity >= 75) return '#f97316';
-  if (intensity >= 60) return '#f59e0b';
-  if (intensity >= 45) return '#10b981';
-  return '#0ea5e9';
+  if (intensity >= 70) return '#f97316';
+  if (intensity >= 45) return '#f59e0b';
+  return '#10b981';
 }
 
 export default function NgoHeatMap({ clusters }: { clusters: HeatCluster[] }) {
@@ -60,7 +60,7 @@ export default function NgoHeatMap({ clusters }: { clusters: HeatCluster[] }) {
               <div className="space-y-1">
                 <p className="text-sm font-bold">{cluster.district}</p>
                 <p className="text-xs text-slate-600">{cluster.region}</p>
-                <p className="text-xs">Need Score: {cluster.intensity}</p>
+                <p className="text-xs">Priority score: {cluster.priorityScore ?? cluster.intensity}</p>
                 {typeof cluster.activeCases === 'number' && <p className="text-xs">Active cases: {cluster.activeCases}</p>}
                 <p className="text-xs">Unmet needs: {cluster.unmetNeeds}</p>
                 <p className="text-xs">Urgent cases: {cluster.urgentCases}</p>

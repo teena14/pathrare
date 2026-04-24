@@ -10,6 +10,7 @@ export default function VolunteerOpenTasksPage() {
     availability,
     canAcceptOpenTasks,
     hasActiveWork,
+    loading,
     openTasks,
     acceptTask,
   } = useVolunteerDashboard();
@@ -28,61 +29,69 @@ export default function VolunteerOpenTasksPage() {
             </div>
             <div className="theme-pill inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-bold">
               <UserRoundSearch className="h-3.5 w-3.5" />
-              {canAcceptOpenTasks ? 'Independent volunteer mode' : 'NGO-assigned mode'}
+              {canAcceptOpenTasks ? 'Eligible to accept now' : 'Locked until available'}
             </div>
           </div>
 
           {!canAcceptOpenTasks && (
             <div className="theme-soft rounded-[1.8rem] p-6 text-sm font-medium text-light-slate">
-              You are currently linked to an NGO flow, so open-task pickup is disabled unless your organization allows it.
+              You can belong to multiple NGOs and still receive the global pool, but you can only accept one active case at a time.
             </div>
           )}
 
-          {canAcceptOpenTasks && (
-            <div className="space-y-4">
-              {openTasks.map((task) => (
-                <div key={task.id} className="theme-soft rounded-[1.8rem] p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-sm font-bold text-dark-slate">{task.title}</h3>
-                        <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${urgencyTone(task.urgency)}`}>{task.urgency}</span>
-                      </div>
-                      <p className="theme-body mt-2 text-light-slate">{task.summary}</p>
+          <div className="space-y-4">
+            {loading && (
+              <div className="theme-soft rounded-[1.8rem] p-5 text-sm font-medium text-light-slate">
+                Loading open support requests...
+              </div>
+            )}
+            {openTasks.map((task) => (
+              <div key={task.id} className="theme-soft rounded-[1.8rem] p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-bold text-dark-slate">{task.title}</h3>
+                      <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${urgencyTone(task.urgency)}`}>{task.urgency}</span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-light-slate">Estimated time</p>
-                      <p className="mt-1 text-sm font-bold text-dark-slate">{task.estimatedTime}</p>
-                    </div>
+                    <p className="theme-body mt-2 text-light-slate">{task.summary}</p>
                   </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {task.skills.map((skill) => (
-                      <span key={skill} className="theme-pill rounded-full px-2.5 py-1 text-xs font-bold">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-sm font-medium text-light-slate">
-                      {hasActiveWork ? 'Finish your current assigned task before accepting another one.' : 'Accepting will lock this case to you immediately.'}
-                    </div>
-                    <button
-                      onClick={() => {
-                        acceptTask(task.id);
-                        router.push('/volunteer');
-                      }}
-                      disabled={availability !== 'Available' || hasActiveWork}
-                      className="theme-primary rounded-full px-4 py-2 text-sm font-bold disabled:bg-brand-slate-100 disabled:text-light-slate disabled:shadow-none"
-                    >
-                      Accept and lock case
-                    </button>
+                  <div className="text-right">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-light-slate">Estimated time</p>
+                    <p className="mt-1 text-sm font-bold text-dark-slate">{task.estimatedTime}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {task.skills.map((skill) => (
+                    <span key={skill} className="theme-pill rounded-full px-2.5 py-1 text-xs font-bold">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-sm font-medium text-light-slate">
+                    {hasActiveWork ? 'Finish your current assigned task before accepting another one.' : 'Accepting will lock this case to you immediately.'}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await acceptTask(task.id);
+                      router.push('/volunteer');
+                    }}
+                    disabled={availability !== 'Available' || hasActiveWork}
+                    className="theme-primary rounded-full px-4 py-2 text-sm font-bold disabled:bg-brand-slate-100 disabled:text-light-slate disabled:shadow-none"
+                  >
+                    Accept and lock case
+                  </button>
+                </div>
+              </div>
+            ))}
+            {!loading && openTasks.length === 0 && (
+              <div className="theme-soft rounded-[1.8rem] p-5 text-sm font-medium text-light-slate">
+                No open patient requests match your current skills right now.
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="space-y-6">

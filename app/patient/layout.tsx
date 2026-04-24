@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Activity, HeartHandshake, Users, HeartPulse, Microscope, LogOut, ArrowLeft } from 'lucide-react';
+import { Activity, HeartHandshake, Users, HeartPulse, Microscope, LogOut, ArrowLeft, Settings } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useEffect } from 'react';
 
@@ -91,6 +91,12 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
             >
               <LogOut className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Logout</span>
             </button>
+            <Link
+              href="/auth/complete-profile"
+              className="flex items-center gap-1.5 text-xs font-bold text-light-slate hover:text-dark-slate transition-colors"
+            >
+              <Settings className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Settings</span>
+            </Link>
             <div className="h-7 w-7 rounded-full bg-primary-blue flex items-center justify-center text-white text-xs font-bold">
               {initials}
             </div>

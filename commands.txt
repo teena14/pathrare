@@ -3,3 +3,37 @@
 `taskkill /PID <pid> /F` - Force-kill a running Next.js dev server process that was occupying port 3000.
 `npm run dev` - Start the Next.js development server on localhost:3000.
 `npm install react-leaflet leaflet @types/leaflet` - Installed Leaflet map library for coordinator heatmap dashboard.
+`Get-Content error.txt`, `Get-Content commands.txt`, `git status --short` - Reviewed project logs and workspace state before adding the requested `command.txt` tracking file.
+`cmd /c npm run lint` - Ran full repo lint; it surfaced pre-existing unrelated errors outside the files changed for the NGO specialization/direct-connect feature.
+`cmd /c npx eslint app/api/resources/route.ts app/api/ngo/connections/route.ts app/ngo/ngo-dashboard-context.tsx app/ngo/overview-content.tsx app/auth/complete-profile/page.tsx "app/patient/life-assist/[category]/page.tsx" lib/ngo-support.ts` - Verified the files touched for matched NGOs in Life Assist and direct NGO connection are lint-clean.
+`cmd /c npx eslint app/api/ngo/connections/route.ts app/ngo/ngo-dashboard-context.tsx app/ngo/overview-content.tsx app/ngo/layout.tsx app/ngo/patients/page.tsx app/patient/life-assist/[category]/page.tsx lib/ngo-support.ts` - Verified the follow-up NGO-side accept/decline workflow and Patients tab are lint-clean.
+`rg -n "setLoading\\(|window.setInterval|setInterval\\(" app lib` - Traced recurring loading transitions and polling to identify the cause of the visible NGO dashboard blinking.
+`cmd /c npx eslint app/ngo/ngo-dashboard-context.tsx` - Verified the NGO dashboard silent-refresh change is lint-clean.
+`Get-Content error.txt` - Reviewed the current error log before updating tracking files.
+`Get-Content commands.txt` - Reviewed the existing command history file and matched its format.
+`git status --short` - Checked workspace state before making housekeeping changes.
+
+Keep this file updated alongside `error.txt` for each task, as requested.
+`rg -n "navigator|case|task|ngo|volunteer|life-assist|support" app lib` - Mapped the live support workflow across patient, NGO, volunteer, and API files.
+`Get-Content lib\support-workflow.ts` - Verified how new requests create task, case, and request records.
+`Get-Content app\api\tasks\route.ts` - Verified task creation, volunteer visibility, acceptance, and completion rules.
+`Get-Content app\api\ngo\dashboard\route.ts` - Verified when NGO dashboards receive incoming, active, and external cases.
+`Get-Content -LiteralPath 'app\patient\life-assist\[category]\page.tsx'` - Verified when patients create requests and when chat becomes available.
+`Get-Content app\volunteer\volunteer-dashboard-context.tsx` - Verified when volunteers see pending, assigned, active, and open tasks.
+`Get-Content app\ngo\ngo-dashboard-context.tsx` - Verified NGO assignment behavior and dashboard case grouping.
+`Get-Content -LiteralPath 'app\patient\life-assist\chat\page.tsx'` - Verified patient chat unlock behavior.
+`Get-Content -LiteralPath 'app\api\tasks\[taskId]\messages\route.ts'` - Verified task-specific chat threading.
+`Get-Content userflow.txt` - Reviewed the previous flow doc before replacing it with the current app behavior.
+`Get-Content node_modules\next\dist\docs\01-app\01-getting-started\15-route-handlers.md` - Checked the local Next route-handler guide before adding new app-router APIs.
+`Get-Content app\api\resources\route.ts` - Updated the resource feed to include matched in-portal NGOs in the medical tab.
+`Get-Content app\auth\complete-profile\page.tsx` - Updated NGO settings capture to include specialization summary and tags.
+`Get-Content app\patient\clinical-profile\page.tsx` - Verified the clinical profile remains a placeholder for later work.
+`Get-Content app\ngo\page.tsx`, `Get-Content app\patient\life-assist\page.tsx`, `Get-Content app\api\ngo\directory\route.ts`, `Get-Content lib\auth-context.tsx` - Reviewed additional NGO/patient integration points before implementing the new flow.
+`Get-Content app\patient\layout.tsx`, `Get-Content app\ngo\layout.tsx`, `Get-Content lib\ngo-associations.ts` - Checked role/layout and NGO identity helpers used by the new direct connect flow.
+`cmd /c npm run lint` - Ran full repo lint; it failed because of pre-existing unrelated issues outside the files changed for this task.
+`cmd /c npx eslint app/api/resources/route.ts app/api/ngo/connections/route.ts app/ngo/ngo-dashboard-context.tsx app/ngo/overview-content.tsx app/auth/complete-profile/page.tsx "app/patient/life-assist/[category]/page.tsx" lib/ngo-support.ts` - Verified the files changed for NGO specialization and direct connection are lint-clean.
+`Get-Content app\ngo\volunteers\page.tsx`, `Get-Content app\ngo\overview-content.tsx`, `Get-Content app\api\ngo\connections\route.ts`, `Get-Content lib\ngo-support.ts` - Reviewed the current NGO connection display to add actions and clean the summary text.
+`cmd /c npx eslint app/api/ngo/connections/route.ts app/ngo/ngo-dashboard-context.tsx app/ngo/overview-content.tsx app/ngo/layout.tsx app/ngo/patients/page.tsx app/patient/life-assist/[category]/page.tsx lib/ngo-support.ts` - Verified the new NGO Patients tab, accept/decline workflow, and summary cleanup are lint-clean.
+`rg -n "setLoading\\(|window.setInterval|setInterval\\(" app lib` - Traced repeated polling and loading state changes to find the source of screen blinking.
+`cmd /c npx eslint app/ngo/ngo-dashboard-context.tsx` - Verified the silent background refresh fix for NGO dashboard blinking is lint-clean.
+`Get-Content features.txt`, `Get-Content git.txt`, `Get-Content commands.txt`, `Get-Content error.txt` - Reviewed the project note files to align logging by category.

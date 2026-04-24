@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, ListTodo, LogOut, MessageSquareText, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, ListTodo, LogOut, MessageSquareText, Settings, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { VolunteerDashboardProvider } from './volunteer-dashboard-context';
 
@@ -53,6 +53,10 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-primary-blue bg-brand-blue-50 border border-brand-blue-100 px-2.5 py-1 rounded-full">Volunteer</span>
+              <Link href="/auth/complete-profile" className="flex items-center gap-1.5 text-xs font-bold text-light-slate hover:text-primary-blue transition-colors">
+                <Settings className="w-3.5 h-3.5" />
+                Settings
+              </Link>
               <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs font-bold text-light-slate hover:text-primary-blue transition-colors">
                 <LogOut className="w-3.5 h-3.5" />
                 Logout

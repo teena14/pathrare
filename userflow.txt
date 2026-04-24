@@ -1,29 +1,119 @@
-PathRare User Flows
+PathRare Current App Flow
 
-This document details the user journeys and flows currently built into the platform.
+This document describes how the app behaves now based on the current patient, NGO, volunteer, and API flows.
 
-1. Authentication Flow
-- Step 1 (Role Selection): When launching the application, the user selects 1 of 3 roles (Patient, NGO, Volunteer). 
-- Step 2 (Auth Action): The user toggles between Login or Sign-up mode. They authenticate using either Email/Password or a Google account. The flow strictly detects role conflicts to prevent mismatches.
-- Step 3 (Profile Completion): Post-authentication, the user fills out a role-specific "complete-profile" form.
-- Step 4 (Redirection): The application checks the Firestore `role` parameter and seamlessly redirects the user to their role-specific dashboard (e.g., `/patient`, `/ngo`).
+1. Core roles
+- Patient: creates support requests from Life Assist resources.
+- NGO: sees NGO-linked incoming requests, monitors active cases, and can nominate a linked volunteer.
+- Volunteer: sees either NGO-offered cases or open matched tasks and can accept one active case at a time.
 
-2. Patient User Flows
-- Primary Navigation: Patients land on `/patient`, which provides routing to primary utilities via tabs: Life Assist, Diagnostic, Clinical Profile, Community, and Care. It contains a reliable "Back to Dashboard" loop.
-- Diagnostic Flow (/patient/diagnose):
-  - The patient decides to either upload clinical documents or provide text-based symptoms directly.
-  - The backend pipeline executes OCR (via Google Vision API) if a document is uploaded, then extracts symptoms using an NLP engine (Gemini).
-  - The extracted data is matched via Vertex AI text embeddings against established Orphanet datasets.
-  - The patient receives ranked cards with matching diagnoses and inference data.
-- Life Assist Flow (/patient/life-assist):
-  - The patient chooses one of 4 categories: Financial & Legal, Adaptive Education, Medical & Care, or Assistive Technology.
-  - The patient sees a list of suggested actions ranked by a multi-factor priority score ((Urgency × 0.4) + (Risk × 0.3) + (Delay × 0.2) + (Access × 0.1)).
-  - Behind the scenes, the request goes through a 4-tier allocation engine (Tier 1: Volunteer → Tier 2: NGO → Tier 3: Self-guided → Tier 4: Queue) ensuring the user is never left at zero dead-ends and receives the best actionable path.
+2. Entry flow
+- A user signs up or logs in as `patient`, `ngo`, or `volunteer`.
+- After complete-profile, the app routes to `/patient`, `/ngo`, or `/volunteer`.
+- Volunteer profiles store `skills`, `availability`, and `associated_ngo_ids`.
+- NGO-linked volunteers can belong to multiple NGOs.
 
-3. Volunteer User Flow
-- Volunteer Dashboard (/volunteer): After authentication, the volunteer lands on their dashboard equipped with a match-scored prioritized task feed.
-- Action Flow: They can choose to accept specific tasks (pushed down from patient Life Assist requests), interact with the task parameters, and review their own reliability and impact statistics.
+3. What happens when a patient requests a navigator
+- The patient opens `/patient/life-assist`, chooses a category, and browses backend-curated resources.
+- Clicking `Request volunteer` on a resource sends a `POST /api/tasks`.
+- The backend first checks for an existing request for the same patient + category + resource. If found, it reuses that task instead of creating a duplicate.
+- If it is a new request, the backend creates all 3 workflow records together:
+- `tasks/{taskId}`: the volunteer-facing work item.
+- `cases/{caseId}`: the NGO/case-management record.
+- `requests/{requestId}`: the intake/assignment record.
+- A system message is also added under `tasks/{taskId}/messages`.
 
-4. NGO User Flow
-- NGO Dashboard (/ngo): Organization representatives land on their dashboard showing task batches that require institutional help.
-- Analytics Flow: NGOs can assess regional demand dynamics and overall organizational success statistics.
+4. Where the patient request goes
+- Every new patient navigator request always becomes a `task`.
+- It also becomes a `case` with status `unassigned`.
+- It also becomes a `request` with status `pending`.
+- If the patient record already carries an NGO/org id, the request is marked for that NGO and also stays visible to the wider volunteer pool.
+- If the patient has no NGO link, the request is global-only.
+- Initial task state is:
+- task status: `open`
+- request status: `pending`
+- case status: `unassigned`
+- assigned volunteer: none
+
+5. When an NGO dashboard gets a case
+- The NGO dashboard loads from `GET /api/ngo/dashboard?ngoId=...`.
+- The `incomingRequests` list only shows requests where:
+- `request.status === pending`
+- `request.ngo_id` matches that NGO's organization id
+- the task has not been archived from that NGO dashboard
+- In practical terms, an NGO gets a case in its intake list only when the request is still pending and is tagged to that NGO.
+- The NGO dashboard also shows:
+- `activeCases`: cases owned by that NGO and currently assigned to a volunteer linked with that NGO
+- `externalCases`: cases tagged to that NGO but already taken by a volunteer outside that NGO association, meaning the global pool picked it up first
+
+6. What the NGO can do with a case
+- On `/ngo/cases`, the NGO can open the assignment panel for an unassigned case.
+- The dashboard suggests volunteers using availability, skill overlap, and rough location matching.
+- When the NGO presses `Assign volunteer`, the current backend does not fully lock the case yet.
+- Instead, it marks that volunteer as the NGO's `candidateVolunteerId` on the request/task.
+- The case remains pending until that specific volunteer accepts it.
+
+7. When a volunteer gets a task
+- The volunteer dashboard loads from `GET /api/tasks?volunteerId=...`.
+- A volunteer can see 3 kinds of work:
+- tasks already assigned to them
+- NGO candidate offers made specifically to them
+- open tasks from the global pool or their linked NGOs, if they are available and skill-matched
+- For open task visibility, all of these must be true:
+- volunteer role is `volunteer`
+- volunteer availability is `available`
+- volunteer has no other active assigned task
+- request is still `pending`
+- task status is `open`, `pending`, or `unassigned`
+- the volunteer matches the task's skills/need type
+- if the task belongs to an NGO, the volunteer must be linked to that NGO
+
+8. What happens when the volunteer accepts
+- Accepting a task runs `PATCH /api/tasks` with status `assigned`.
+- The backend then:
+- verifies the task/request/case exists
+- verifies the volunteer is `available`
+- verifies the request is still `pending`
+- verifies the volunteer has no other active assignment
+- verifies NGO linkage if the task belongs to an NGO
+- If valid, the backend updates:
+- request status to `accepted`
+- case status to `assigned`
+- task status to `assigned`
+- `assignedVolunteerId` and `assignedVolunteerName`
+- volunteer availability to `busy`
+- assignment source to `ngo` or `global`
+- Once accepted, the case is removed from everyone else and is effectively locked to that volunteer.
+
+9. When patient chat becomes available
+- The patient sees support requests in the category page under `My Support Requests`.
+- The patient only gets `Open chat` when:
+- the task has an assigned volunteer
+- the task status is `active`, `in_progress`, `completed`, or `resolved`
+- This means volunteer acceptance alone is not enough for the patient UI to open chat.
+- The volunteer must start the task first, which changes the task to `in_progress`.
+- After that, both sides use `tasks/{taskId}/messages` for the case-specific thread.
+
+10. Volunteer task lifecycle after acceptance
+- `Pending`: usually an NGO offered the case to that volunteer, but the volunteer has not accepted yet.
+- `Assigned`: the volunteer accepted ownership, but has not started work.
+- `Active`: the volunteer started the task and case chat is live.
+- `Completed`: the volunteer marked the task complete.
+- On completion, the backend:
+- sets the task/case to completed
+- keeps the request accepted
+- returns the volunteer to `available`
+
+11. Simple end-to-end example
+- Patient requests help for a Life Assist resource.
+- PathRare creates a task, case, request, and system message.
+- If the request is NGO-linked, that NGO sees it in `incomingRequests`.
+- A linked NGO can nominate one of its volunteers, but the volunteer still has to accept.
+- If no NGO volunteer takes it first, an eligible available volunteer can see it in open tasks and accept directly.
+- Once a volunteer accepts, the case becomes assigned and the volunteer becomes busy.
+- Once the volunteer starts the task, patient chat becomes available.
+- When the volunteer finishes and marks it completed, the volunteer becomes available for the next case.
+
+12. Current behavior notes
+- `Assign volunteer` on the NGO screen is currently a shortlist/offer step, not the final lock step.
+- The patient-facing system message says the case chat is open on acceptance, but the current patient UI actually unlocks chat only after the volunteer starts the task.

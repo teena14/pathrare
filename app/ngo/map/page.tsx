@@ -26,7 +26,7 @@ export default function NgoMapPage() {
         <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="theme-heading-40 text-dark-slate">Map & Insights</h1>
-            <p className="theme-body mt-2 text-light-slate">Explore where help is needed most with a real zoomable map, then match the right intervention type.</p>
+            <p className="theme-body mt-2 text-light-slate">Explore where help is needed most using NGO-specific priority scoring, then match the right intervention type.</p>
           </div>
           <div className="grid min-w-[320px] grid-cols-3 gap-2">
             <select value={selectedGeography} onChange={(e) => setSelectedGeography(e.target.value)} className="rounded-2xl border border-brand-slate-100 bg-white px-3 py-2 text-sm font-medium text-dark-slate">
@@ -75,7 +75,7 @@ export default function NgoMapPage() {
           <h2 className="theme-title-24 mb-4 text-dark-slate">Insight Highlights</h2>
           <div className="space-y-3">
             {[
-              demandClusters[0] ? `${demandClusters[0].district} currently has the highest composite Need Score (${demandClusters[0].intensity}).` : null,
+              demandClusters[0] ? `${demandClusters[0].district} currently has the highest composite priority score (${demandClusters[0].priorityScore}).` : null,
               unmetNeeds > 0 ? `${unmetNeeds} active case${unmetNeeds === 1 ? '' : 's'} are unassigned or waiting for support.` : null,
               categoryBreakdown[0] ? `${categoryBreakdown[0].label} is the largest active support category.` : null,
             ].filter(Boolean).map((insight) => (

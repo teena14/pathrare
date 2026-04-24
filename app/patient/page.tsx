@@ -125,7 +125,7 @@ const container = {
 };
 const cardVariant = {
   hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const } },
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -137,7 +137,7 @@ export default function PatientHomePage() {
     <div className="space-y-10">
 
       {/* Welcome */}
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] as const }}>
 
         <h1 className="text-4xl font-black text-dark-slate tracking-tight leading-tight mt-7">
           Welcome,<span className="text-primary-blue">{name}</span>

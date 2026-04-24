@@ -35,3 +35,14 @@
     - /api/tasks — create/get structured task objects.
     - /api/allocate — 4-tier allocation engine with priority scoring.
 - /dashboard deprecated: now redirects to role-specific route.
+- [PHASE 3] NGO specialization and direct patient-to-NGO connection:
+    - NGO profiles can now store specialization summary and specialization tags.
+    - Matched in-portal NGOs now appear in the patient Life Assist medical tab alongside standard resources.
+    - Patients can send direct NGO connection requests through the PathRare portal.
+    - Each connection request stores a patient summary, with future support for a clinical-profile link.
+- [PHASE 3] NGO patient workspace:
+    - Added `/ngo/patients` tab for direct NGO connection management.
+    - Incoming patient requests now support `Accept` and `Decline`.
+    - Accepted requests move into a connected-patients list for ongoing coordination.
+- [PHASE 3] NGO direct-connect card cleanup:
+    - Removed duplicated location and condition text from the summary paragraph when those fields are already displayed separately on the card.

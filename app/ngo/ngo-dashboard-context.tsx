@@ -2,64 +2,127 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { getAssociatedNgoIds, toAvailabilityLabel } from '@/lib/ngo-associations';
 import type { HeatCluster } from './NgoHeatMap';
 
 export type NeedType =
   | 'Medical Support'
-  | 'Financial Assistance'
-  | 'Documentation Help'
-  | 'Care Guidance';
+  | 'Financial and Legal Aid'
+  | 'Adaptive Education'
+  | 'Assistive Technology';
 
-export type CaseStatus = 'Unassigned' | 'Assigned' | 'In Progress' | 'Resolved';
+export type CaseStatus = 'Unassigned' | 'Assigned' | 'In Progress' | 'Resolved' | 'Handled Externally';
 export type VolunteerAvailability = 'Available' | 'Busy' | 'Offline';
 
-type DashboardUser = {
+type FirestoreRecord = Record<string, unknown>;
+
+type DashboardVolunteer = {
   id: string;
-  uid?: string;
-  email?: string | null;
   displayName?: string | null;
-  firstName?: string;
-  lastName?: string;
-  role?: string;
-  country?: string;
-  primaryDisease?: string;
-  diagnosisStatus?: string;
-  location?: string;
-  city?: string;
-  district?: string;
-  state?: string;
-  region?: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  location?: string | null;
+  city?: string | null;
+  region?: string | null;
+  state?: string | null;
+  availability?: string | number | null;
+  weeklyCapacityHours?: string | number | null;
   skills?: string[];
-  availability?: string | number;
-  focusAreas?: string[];
-  createdAt?: string;
-  lastReceivedHelpAt?: string;
+  associated_ngo_ids?: string[];
 };
 
-type DashboardTask = {
+type DashboardRequest = {
   id: string;
-  task_id?: string;
-  userId?: string | null;
-  title?: string | null;
-  summary?: string | null;
-  type?: string;
+  requestId: string;
+  caseId: string;
+  userId: string;
+  title: string;
+  summary: string;
   category?: string | null;
-  priority?: string;
-  urgency_score?: number;
-  required_skills?: string[];
-  fallback_strategy?: string[];
-  status?: string;
+  needType: string;
+  urgencyScore: number;
+  status: string;
+  requestStatus: string;
+  district: string;
+  region: string;
+  diseaseCluster: string;
+  patientName: string;
   assignedVolunteerId?: string | null;
+  candidateVolunteerId?: string | null;
+  assignedSource?: string | null;
   createdAt?: string;
-  updatedAt?: string;
-  lastInterventionAt?: string | null;
+};
+
+type DashboardCase = {
+  id: string;
+  taskId: string;
+  caseId: string;
+  title: string;
+  needType: string;
+  diseaseCluster: string;
+  urgencyScore: number;
+  status: string;
+  patientName?: string;
+  district?: string;
+  region?: string;
+  assignedVolunteerId?: string | null;
+  assignedVolunteerName?: string | null;
+  createdAt?: string;
+};
+
+type DashboardHeatMetric = {
+  id: string;
+  region: {
+    country?: string | null;
+    state?: string | null;
+    city?: string | null;
+  };
+  total_cases: number;
+  urgent_cases: number;
+  unassigned_cases: number;
+  disease_clusters: string[];
+  need_types: string[];
+  priority_score: number;
+  color: 'green' | 'yellow' | 'orange' | 'red';
 };
 
 type NgoDashboardPayload = {
-  patients: DashboardUser[];
-  volunteers: DashboardUser[];
-  tasks: DashboardTask[];
+  ngo: {
+    id: string;
+    organizationId?: string | null;
+    name: string;
+    region?: string | null;
+    focusTags: string[];
+  };
+  volunteers: DashboardVolunteer[];
+  incomingRequests: DashboardRequest[];
+  activeCases: DashboardCase[];
+  externalCases: DashboardCase[];
+  heatmap: DashboardHeatMetric[];
+  summary: {
+    incomingRequests: number;
+    activeCases: number;
+    externalCases: number;
+    availableVolunteers: number;
+    linkedVolunteers: number;
+  };
   generatedAt: string;
+};
+
+type DashboardPatientConnection = {
+  id: string;
+  patient_id?: string;
+  patient_name: string;
+  patient_location?: string | null;
+  patient_condition?: string | null;
+  diagnosis_status?: string | null;
+  patient_summary: string;
+  created_at?: string;
+  updated_at?: string;
+  clinical_profile_url?: string | null;
+  clinical_profile_available?: boolean;
+  status?: string;
 };
 
 type LocationCoord = {
@@ -75,6 +138,7 @@ export type DemandCluster = HeatCluster & {
   activeCases: number;
   supportGapScore: number;
   recencyScore: number;
+  priorityScore: number;
 };
 
 export type CaseRequest = {
@@ -89,6 +153,7 @@ export type CaseRequest = {
   suggestedVolunteerIds: string[];
   assignedVolunteerId?: string;
   patientDisease?: string;
+  patientName?: string;
   createdAt?: string;
   lastInterventionAt?: string | null;
 };
@@ -96,10 +161,12 @@ export type CaseRequest = {
 export type VolunteerProfile = {
   id: string;
   name: string;
+  email?: string | null;
   skills: string[];
   availability: VolunteerAvailability;
   weeklyCapacity: string;
   region: string;
+  associatedNgoIds: string[];
 };
 
 export type CategoryBreakdownItem = {
@@ -122,11 +189,25 @@ export type EffectivenessSnapshot = {
   unresolvedAfterSevenDays: number;
 };
 
+export type PatientConnectionRequest = {
+  id: string;
+  patientId: string;
+  patientName: string;
+  patientLocation: string;
+  patientCondition: string | null;
+  diagnosisStatus: string | null;
+  patientSummary: string;
+  createdAt?: string;
+  clinicalProfileUrl?: string | null;
+  clinicalProfileAvailable: boolean;
+  status: string;
+};
+
 const NEED_COLORS: Record<NeedType, string> = {
-  'Documentation Help': '#0ea5e9',
-  'Financial Assistance': '#f59e0b',
+  'Adaptive Education': '#0ea5e9',
+  'Assistive Technology': '#10b981',
+  'Financial and Legal Aid': '#f59e0b',
   'Medical Support': '#ef4444',
-  'Care Guidance': '#10b981',
 };
 
 const INDIA_DISTRICT_COORDS: Record<string, LocationCoord> = {
@@ -147,8 +228,6 @@ const INDIA_DISTRICT_COORDS: Record<string, LocationCoord> = {
   pune: { lat: 18.5204, lng: 73.8567, state: 'Maharashtra', region: 'West Maharashtra' },
   surat: { lat: 21.1702, lng: 72.8311, state: 'Gujarat', region: 'Gujarat' },
 };
-
-const KNOWN_DISTRICTS = new Set(Object.keys(INDIA_DISTRICT_COORDS));
 
 const INDIA_REGION_COORDS: Record<string, LocationCoord> = {
   'andhra pradesh': { lat: 15.9129, lng: 79.74, state: 'Andhra Pradesh', region: 'Andhra Pradesh', label: 'Andhra Pradesh' },
@@ -195,225 +274,204 @@ function formatRelativeTime(value: unknown) {
   return 'over 30 days ago';
 }
 
-function getDisplayName(user: DashboardUser) {
-  const full = `${asString(user.firstName)} ${asString(user.lastName)}`.trim();
-  return full || asString(user.displayName) || asString(user.email) || 'Unnamed user';
+function mapNeedType(value: unknown): NeedType {
+  const text = asString(value).toLowerCase();
+  if (text.includes('financial') || text.includes('legal')) return 'Financial and Legal Aid';
+  if (text.includes('education')) return 'Adaptive Education';
+  if (text.includes('assistive')) return 'Assistive Technology';
+  return 'Medical Support';
 }
 
-function getPatientId(user: DashboardUser) {
-  return user.uid || user.id;
-}
-
-function getLocationParts(user: DashboardUser) {
-  const location = asString(user.district) || asString(user.city) || asString(user.location) || asString(user.region) || asString(user.state);
-  const normalized = normalizeLocation(location);
-  const district = Array.from(KNOWN_DISTRICTS).find((known) => normalized.includes(known)) || normalized;
-  const coords = district ? INDIA_DISTRICT_COORDS[district] : null;
-  const regionKey = normalizeLocation(asString(user.state) || asString(user.region) || location);
-  const regionCoords = coords ? null : INDIA_REGION_COORDS[regionKey];
-  const displayDistrict = coords
-    ? district.replace(/\b\w/g, (char) => char.toUpperCase())
-    : regionCoords?.label ?? location ?? 'Location not added';
-  const region = asString(user.region) || asString(user.state) || coords?.region || regionCoords?.region || 'Region not added';
-
-  return { district: displayDistrict, region, coords: coords ?? regionCoords };
-}
-
-function mapNeedType(task: DashboardTask): NeedType {
-  const text = `${task.category ?? ''} ${task.type ?? ''} ${task.title ?? ''} ${(task.required_skills ?? []).join(' ')}`.toLowerCase();
-  if (text.includes('document') || text.includes('form') || text.includes('legal') || text.includes('certificate')) return 'Documentation Help';
-  if (text.includes('financial') || text.includes('fund') || text.includes('money') || text.includes('scheme') || text.includes('grant')) return 'Financial Assistance';
-  if (text.includes('medical') || text.includes('doctor') || text.includes('medicine') || text.includes('specialist')) return 'Medical Support';
-  return 'Care Guidance';
-}
-
-function mapUrgency(task: DashboardTask): CaseRequest['urgency'] {
-  const score = typeof task.urgency_score === 'number' ? task.urgency_score : 0.5;
-  const priority = asString(task.priority).toLowerCase();
-  if (priority === 'urgent' || score >= 0.85) return 'Critical';
-  if (priority === 'high' || score >= 0.65) return 'High';
+function mapUrgency(score: unknown): CaseRequest['urgency'] {
+  const value = Number(score ?? 0);
+  if (value >= 0.85) return 'Critical';
+  if (value >= 0.65) return 'High';
   return 'Moderate';
 }
 
-function mapStatus(task: DashboardTask): CaseStatus {
-  const status = asString(task.status).toLowerCase();
-  if (status === 'assigned') return 'Assigned';
-  if (status === 'active' || status === 'in_progress') return 'In Progress';
-  if (status === 'completed' || status === 'resolved') return 'Resolved';
+function mapStatus(status: unknown, assignedSource?: unknown): CaseStatus {
+  const value = asString(status).toLowerCase();
+  const source = asString(assignedSource).toLowerCase();
+  if (source === 'global') return 'Handled Externally';
+  if (value === 'assigned' || value === 'accepted') return 'Assigned';
+  if (value === 'active' || value === 'in_progress') return 'In Progress';
+  if (value === 'completed' || value === 'resolved') return 'Resolved';
   return 'Unassigned';
 }
 
-function volunteerAvailability(volunteer: DashboardUser): VolunteerAvailability {
-  const raw = volunteer.availability;
-  const text = String(raw ?? '').toLowerCase();
-  const hours = typeof raw === 'number' ? raw : Number.parseFloat(text);
-
-  if (text.includes('offline') || hours === 0) return 'Offline';
-  if (text.includes('busy') || text.includes('focused')) return 'Busy';
-  return 'Available';
+function volunteerAvailability(volunteer: DashboardVolunteer): VolunteerAvailability {
+  return toAvailabilityLabel(volunteer.availability) as VolunteerAvailability;
 }
 
-function getRequiredSkillsForNeed(needType: NeedType) {
-  if (needType === 'Documentation Help') return ['Form Filling', 'Documentation', 'Legal Literacy'];
-  if (needType === 'Financial Assistance') return ['Form Filling', 'Scheme Awareness', 'Financial Aid'];
-  if (needType === 'Medical Support') return ['Medical Escort', 'Care Navigation', 'Medical Support'];
-  return ['Counselling', 'Care Navigation', 'Translation'];
-}
-
-function hasSkillMatch(volunteer: VolunteerProfile, needType: NeedType, taskSkills: string[]) {
-  const wanted = [...getRequiredSkillsForNeed(needType), ...taskSkills].map((entry) => entry.toLowerCase());
-  return volunteer.skills.some((skill) => wanted.some((entry) => skill.toLowerCase().includes(entry) || entry.includes(skill.toLowerCase())));
-}
-
-function caseNeedsAttention(request: CaseRequest) {
-  return request.status !== 'Resolved';
-}
-
-function buildCases(tasks: DashboardTask[], patients: DashboardUser[], volunteers: VolunteerProfile[]) {
-  const patientLookup = new Map(patients.map((patient) => [getPatientId(patient), patient]));
-
-  return tasks
-    .filter((task) => task.userId && patientLookup.has(task.userId))
-    .map((task) => {
-      const patient = patientLookup.get(task.userId!)!;
-      const location = getLocationParts(patient);
-      const needType = mapNeedType(task);
-      const urgency = mapUrgency(task);
-      const taskSkills = task.required_skills ?? [];
-      const suggestedVolunteerIds = volunteers
-        .filter((volunteer) => volunteer.availability === 'Available')
-        .filter((volunteer) => volunteer.region === location.district || volunteer.region === location.region || hasSkillMatch(volunteer, needType, taskSkills))
-        .slice(0, 4)
-        .map((volunteer) => volunteer.id);
-      const disease = asString(patient.primaryDisease);
-      const diagnosis = asString(patient.diagnosisStatus);
-      const title = asString(task.title) || `${needType} request${disease ? ` for ${disease}` : ''}`;
-      const summaryParts = [
-        asString(task.summary),
-        disease ? `Condition: ${disease}` : '',
-        diagnosis ? `Diagnosis status: ${diagnosis}` : '',
-      ].filter(Boolean);
-
-      return {
-        id: task.id || task.task_id || crypto.randomUUID(),
-        title,
-        district: location.district,
-        region: location.region,
-        summary: summaryParts.join(' | ') || 'Patient requested support, but no additional details were saved.',
-        urgency,
-        needType,
-        status: mapStatus(task),
-        suggestedVolunteerIds,
-        assignedVolunteerId: task.assignedVolunteerId ?? undefined,
-        patientDisease: disease || undefined,
-        createdAt: task.createdAt,
-        lastInterventionAt: task.lastInterventionAt ?? task.updatedAt ?? null,
-      } satisfies CaseRequest;
-    });
-}
-
-function buildVolunteers(volunteers: DashboardUser[]) {
+function buildVolunteers(volunteers: DashboardVolunteer[]) {
   return volunteers.map((volunteer) => {
     const skills = Array.isArray(volunteer.skills) ? volunteer.skills.map(String).filter(Boolean) : [];
     const availability = volunteerAvailability(volunteer);
-    const rawHours = volunteer.availability;
-    const weeklyCapacity = typeof rawHours === 'number' || asString(rawHours)
-      ? `${rawHours} hrs/week`
-      : 'Capacity not added';
+    const rawHours = volunteer.weeklyCapacityHours ?? volunteer.availability;
+    const weeklyCapacity =
+      typeof rawHours === 'number' || asString(rawHours)
+        ? `${rawHours} hrs/week`
+        : 'Capacity not added';
+    const region =
+      asString(volunteer.location) ||
+      asString(volunteer.city) ||
+      asString(volunteer.region) ||
+      asString(volunteer.state) ||
+      'Location not added';
+    const fullName = `${asString(volunteer.firstName)} ${asString(volunteer.lastName)}`.trim();
 
     return {
-      id: volunteer.uid || volunteer.id,
-      name: getDisplayName(volunteer),
+      id: volunteer.id,
+      name: fullName || asString(volunteer.displayName) || 'Volunteer',
+      email: asString(volunteer.email) || null,
       skills,
       availability,
       weeklyCapacity,
-      region: asString(volunteer.location) || asString(volunteer.city) || asString(volunteer.district) || asString(volunteer.region) || 'Location not added',
+      region,
+      associatedNgoIds: getAssociatedNgoIds(volunteer),
     } satisfies VolunteerProfile;
   });
 }
 
-function buildDemandClusters(cases: CaseRequest[]): DemandCluster[] {
-  const activeCases = cases.filter(caseNeedsAttention);
-  const maxVolume = Math.max(1, ...activeCases.map((request) => activeCases.filter((entry) => entry.district === request.district).length));
-  const grouped = new Map<string, CaseRequest[]>();
+function hasSkillMatch(volunteer: VolunteerProfile, needType: NeedType, taskSkills: string[]) {
+  const wanted = [needType, ...taskSkills].map((entry) => entry.toLowerCase());
+  return volunteer.skills.some((skill) => wanted.some((entry) => skill.toLowerCase().includes(entry) || entry.includes(skill.toLowerCase())));
+}
 
-  activeCases.forEach((request) => {
-    const key = normalizeLocation(request.district);
-    if (!INDIA_DISTRICT_COORDS[key] && !INDIA_REGION_COORDS[key]) return;
-    grouped.set(key, [...(grouped.get(key) ?? []), request]);
+function buildCases(
+  incomingRequests: DashboardRequest[],
+  activeCases: DashboardCase[],
+  externalCases: DashboardCase[],
+  volunteers: VolunteerProfile[]
+) {
+  const fromIncoming = incomingRequests.map((request) => {
+    const suggestedVolunteerIds = volunteers
+      .filter((volunteer) => volunteer.availability === 'Available')
+      .filter((volunteer) => volunteer.region === request.district || volunteer.region === request.region || hasSkillMatch(volunteer, mapNeedType(request.needType), []))
+      .slice(0, 4)
+      .map((volunteer) => volunteer.id);
+
+    return {
+      id: request.id,
+      title: request.title,
+      district: request.district,
+      region: request.region,
+      summary: request.summary || `${request.patientName} requested support.`,
+      urgency: mapUrgency(request.urgencyScore),
+      needType: mapNeedType(request.needType),
+      status: mapStatus(request.status, request.assignedSource),
+      suggestedVolunteerIds,
+      assignedVolunteerId: request.assignedVolunteerId ?? undefined,
+      patientDisease: request.diseaseCluster,
+      patientName: request.patientName,
+      createdAt: request.createdAt,
+      lastInterventionAt: null,
+    } satisfies CaseRequest;
   });
 
-  return Array.from(grouped.entries())
-    .map(([districtKey, requests]) => {
+  const fromActive = activeCases.map((entry) => ({
+    id: entry.taskId || entry.id,
+    title: entry.title,
+    district: entry.district ?? 'Location not added',
+    region: entry.region ?? 'Region not added',
+    summary: `${entry.patientName ?? 'Patient'} is currently being handled by your NGO.`,
+    urgency: mapUrgency(entry.urgencyScore),
+    needType: mapNeedType(entry.needType),
+    status: mapStatus(entry.status, 'ngo'),
+    suggestedVolunteerIds: [],
+    assignedVolunteerId: entry.assignedVolunteerId ?? undefined,
+    patientDisease: entry.diseaseCluster,
+    patientName: entry.patientName,
+    createdAt: entry.createdAt,
+    lastInterventionAt: entry.createdAt ?? null,
+  }) satisfies CaseRequest);
+
+  const fromExternal = externalCases.map((entry) => ({
+    id: entry.taskId || entry.id,
+    title: entry.title,
+    district: 'Location not added',
+    region: 'Handled externally',
+    summary: 'This case was accepted by the global volunteer pool before your NGO could take ownership.',
+    urgency: mapUrgency(entry.urgencyScore),
+    needType: mapNeedType(entry.needType),
+    status: mapStatus(entry.status, 'global'),
+    suggestedVolunteerIds: [],
+    assignedVolunteerId: entry.assignedVolunteerId ?? undefined,
+    patientDisease: entry.diseaseCluster,
+    createdAt: entry.createdAt,
+    lastInterventionAt: entry.createdAt ?? null,
+  }) satisfies CaseRequest);
+
+  return [...fromIncoming, ...fromActive, ...fromExternal].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+}
+
+function buildDemandClusters(metrics: DashboardHeatMetric[]): DemandCluster[] {
+  return metrics
+    .map((metric) => {
+      const districtKey = normalizeLocation(asString(metric.region.city) || asString(metric.region.state) || asString(metric.region.country));
       const coords = INDIA_DISTRICT_COORDS[districtKey] ?? INDIA_REGION_COORDS[districtKey];
-      const urgencyAverage = requests.reduce((sum, request) => {
-        if (request.urgency === 'Critical') return sum + 1;
-        if (request.urgency === 'High') return sum + 0.7;
-        return sum + 0.4;
-      }, 0) / requests.length;
-      const unassignedRatio = requests.filter((request) => request.status === 'Unassigned').length / requests.length;
-      const noVolunteerRatio = requests.filter((request) => request.suggestedVolunteerIds.length === 0).length / requests.length;
-      const supportGapScore = (unassignedRatio * 0.65) + (noVolunteerRatio * 0.35);
-      const recencyScore = requests.reduce((sum, request) => {
-        return sum + Math.min(1, daysSince(request.lastInterventionAt ?? request.createdAt) / 14);
-      }, 0) / requests.length;
-      const volumeScore = requests.length / maxVolume;
-      const intensity = Math.round(((volumeScore * 0.3) + (urgencyAverage * 0.3) + (supportGapScore * 0.25) + (recencyScore * 0.15)) * 100);
-      const needCounts = requests.reduce((acc, request) => {
-        acc.set(request.needType, (acc.get(request.needType) ?? 0) + 1);
-        return acc;
-      }, new Map<NeedType, number>());
-      const topNeed = Array.from(needCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'Care Guidance';
-      const district = coords.label ?? districtKey.replace(/\b\w/g, (char) => char.toUpperCase());
+      if (!coords) return null;
+
+      const priority = Number(metric.priority_score ?? 0);
+      const intensity = Math.max(15, Math.min(100, Math.round(priority * 6)));
+      const topNeed = mapNeedType(metric.need_types[0] ?? 'medical');
 
       return {
-        id: districtKey,
+        id: metric.id,
         region: coords.region,
-        district,
+        district: coords.label ?? (asString(metric.region.city) || asString(metric.region.state) || 'Unknown'),
         intensity,
-        unmetNeeds: requests.filter((request) => request.status === 'Unassigned').length,
-        urgentCases: requests.filter((request) => request.urgency === 'Critical').length,
+        unmetNeeds: Number(metric.unassigned_cases ?? 0),
+        urgentCases: Number(metric.urgent_cases ?? 0),
         topNeed,
         lat: coords.lat,
         lng: coords.lng,
-        activeCases: requests.length,
-        supportGapScore,
-        recencyScore,
+        activeCases: Number(metric.total_cases ?? 0),
+        supportGapScore: Number(metric.unassigned_cases ?? 0),
+        recencyScore: 0,
+        priorityScore: priority,
       } satisfies DemandCluster;
     })
-    .sort((a, b) => b.intensity - a.intensity);
+    .filter((cluster): cluster is DemandCluster => Boolean(cluster))
+    .sort((a, b) => b.priorityScore - a.priorityScore);
 }
 
 function buildCategoryBreakdown(cases: CaseRequest[]): CategoryBreakdownItem[] {
-  const activeCases = cases.filter(caseNeedsAttention);
+  const activeCases = cases.filter((entry) => entry.status !== 'Resolved');
   const total = activeCases.length || 1;
 
-  return (Object.keys(NEED_COLORS) as NeedType[])
-    .map((label) => {
-      const count = activeCases.filter((request) => request.needType === label).length;
-      return {
-        label,
-        count,
-        percent: Math.round((count / total) * 100),
-        color: NEED_COLORS[label],
-      };
-    })
-    .filter((item) => item.count > 0);
+  return (Object.keys(NEED_COLORS) as NeedType[]).map((label) => {
+    const count = activeCases.filter((request) => request.needType === label).length;
+    return {
+      label,
+      count,
+      percent: Math.round((count / total) * 100),
+      color: NEED_COLORS[label],
+    };
+  }).filter((item) => item.count > 0);
 }
 
 function buildRecentActivity(cases: CaseRequest[], volunteers: VolunteerProfile[]): RecentActivityItem[] {
   const caseActivity = cases.slice(0, 5).map((request) => ({
     id: request.id,
-    type: request.status === 'Resolved' ? 'resolved' as const : request.assignedVolunteerId ? 'assignment' as const : 'case' as const,
-    text: request.assignedVolunteerId
-      ? `${request.title} assigned for ${request.district}`
-      : `${request.title} received from ${request.district}`,
+    type:
+      request.status === 'Resolved'
+        ? ('resolved' as const)
+        : request.assignedVolunteerId
+          ? ('assignment' as const)
+          : ('case' as const),
+    text:
+      request.status === 'Handled Externally'
+        ? `${request.title} was picked up by the global volunteer pool.`
+        : request.assignedVolunteerId
+          ? `${request.title} is now assigned.`
+          : `${request.title} entered your NGO pipeline.`,
     time: formatRelativeTime(request.createdAt),
   }));
   const volunteerActivity = volunteers.slice(0, 3).map((volunteer) => ({
     id: `volunteer-${volunteer.id}`,
     type: 'volunteer' as const,
-    text: `${volunteer.name} is available in ${volunteer.region}`,
+    text: `${volunteer.name} is ${volunteer.availability.toLowerCase()} in ${volunteer.region}.`,
     time: 'live profile',
   }));
 
@@ -432,7 +490,7 @@ function buildEffectiveness(cases: CaseRequest[]): EffectivenessSnapshot {
   const averageUrgentResponse = urgentResolved.length
     ? `${Math.round(urgentResolved.reduce((sum, request) => sum + daysSince(request.createdAt), 0) / urgentResolved.length)} days`
     : 'No resolved urgent cases';
-  const unresolvedAfterSevenDays = cases.filter((request) => caseNeedsAttention(request) && daysSince(request.createdAt) >= 7).length;
+  const unresolvedAfterSevenDays = cases.filter((request) => request.status === 'Unassigned' && daysSince(request.createdAt) >= 7).length;
 
   return { resolvedThisMonth, averageUrgentResponse, unresolvedAfterSevenDays };
 }
@@ -456,6 +514,7 @@ type NgoDashboardContextValue = {
   assignmentTarget: string | null;
   setAssignmentTarget: (value: string | null) => void;
   assignVolunteer: (caseId: string, volunteerId: string) => Promise<void>;
+  deleteCase: (caseId: string) => Promise<void>;
   volunteerLookup: Map<string, VolunteerProfile>;
   volunteers: VolunteerProfile[];
   selectedAssignmentCase: CaseRequest | null;
@@ -468,6 +527,11 @@ type NgoDashboardContextValue = {
   categoryBreakdown: CategoryBreakdownItem[];
   recentActivity: RecentActivityItem[];
   effectiveness: EffectivenessSnapshot;
+  patientConnections: PatientConnectionRequest[];
+  incomingPatientConnections: PatientConnectionRequest[];
+  connectedPatients: PatientConnectionRequest[];
+  acceptPatientConnection: (requestId: string) => Promise<void>;
+  declinePatientConnection: (requestId: string) => Promise<void>;
   refreshDashboard: () => Promise<void>;
 };
 
@@ -483,6 +547,7 @@ export function statusTone(status: CaseStatus) {
   if (status === 'Unassigned') return 'bg-brand-slate-100 text-light-slate';
   if (status === 'Assigned') return 'bg-brand-blue-50 text-primary-blue';
   if (status === 'Resolved') return 'bg-emerald-50 text-emerald-700';
+  if (status === 'Handled Externally') return 'bg-amber-50 text-amber-700';
   return 'bg-primary-blue text-white';
 }
 
@@ -494,8 +559,9 @@ export function availabilityTone(status: VolunteerAvailability) {
 
 export function NgoDashboardProvider({ children }: { children: React.ReactNode }) {
   const { profile } = useAuth();
-  const ngoName = (profile as Record<string, unknown> | null)?.orgName as string | undefined;
-  const name = ngoName ?? profile?.displayName ?? 'Organisation';
+  const profileUid = profile?.uid ?? '';
+  const profileRecord = (profile as FirestoreRecord | null) ?? null;
+  const name = asString(profileRecord?.orgName) || profile?.displayName || 'Organisation';
   const [payload, setPayload] = useState<NgoDashboardPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -503,44 +569,98 @@ export function NgoDashboardProvider({ children }: { children: React.ReactNode }
   const [selectedUrgency, setSelectedUrgency] = useState('All urgency');
   const [selectedNeedType, setSelectedNeedType] = useState('All needs');
   const [assignmentTarget, setAssignmentTarget] = useState<string | null>(null);
+  const [patientConnections, setPatientConnections] = useState<PatientConnectionRequest[]>([]);
 
-  const refreshDashboard = useCallback(async () => {
-    setLoading(true);
+  const refreshDashboard = useCallback(async (options?: { showLoading?: boolean }) => {
+    const showLoading = options?.showLoading ?? false;
+
+    if (!profileUid) {
+      setPayload(null);
+      setPatientConnections([]);
+      setLoading(false);
+      return;
+    }
+
+    if (showLoading) {
+      setLoading(true);
+    }
     setError('');
 
     try {
-      const response = await fetch('/api/ngo/dashboard', { cache: 'no-store' });
-      const data = await response.json();
+      const [response, connectionResponse] = await Promise.all([
+        fetch(`/api/ngo/dashboard?ngoId=${encodeURIComponent(profileUid)}`, { cache: 'no-store' }),
+        fetch(`/api/ngo/connections?ngoId=${encodeURIComponent(profileUid)}`, { cache: 'no-store' }),
+      ]);
+      const [data, connectionData] = await Promise.all([response.json(), connectionResponse.json()]);
 
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to load NGO dashboard data.');
       }
 
+      if (!connectionResponse.ok) {
+        throw new Error(connectionData.error ?? 'Unable to load patient connection requests.');
+      }
+
       setPayload(data);
+      setPatientConnections(
+        Array.isArray(connectionData.requests)
+          ? connectionData.requests.map((request: DashboardPatientConnection) => ({
+              id: request.id,
+              patientId: asString(request.patient_id) || '',
+              patientName: asString(request.patient_name) || 'Patient',
+              patientLocation: asString(request.patient_location) || 'Location not added',
+              patientCondition: asString(request.patient_condition) || null,
+              diagnosisStatus: asString(request.diagnosis_status) || null,
+              patientSummary: asString(request.patient_summary),
+              createdAt: asString(request.updated_at) || asString(request.created_at) || undefined,
+              clinicalProfileUrl: asString(request.clinical_profile_url) || null,
+              clinicalProfileAvailable: Boolean(request.clinical_profile_available),
+              status: asString(request.status) || 'pending',
+            }))
+          : []
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unable to load NGO dashboard data.');
-      setPayload(null);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [profileUid]);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
-      void refreshDashboard();
+      void refreshDashboard({ showLoading: true });
     }, 0);
 
-    return () => window.clearTimeout(id);
-  }, [refreshDashboard]);
+    if (!profileUid) {
+      return () => window.clearTimeout(id);
+    }
+
+    const interval = window.setInterval(() => {
+      void refreshDashboard();
+    }, 10000);
+
+    return () => {
+      window.clearTimeout(id);
+      window.clearInterval(interval);
+    };
+  }, [profileUid, refreshDashboard]);
 
   const volunteers = useMemo(() => buildVolunteers(payload?.volunteers ?? []), [payload?.volunteers]);
-  const caseRequests = useMemo(() => buildCases(payload?.tasks ?? [], payload?.patients ?? [], volunteers), [payload?.patients, payload?.tasks, volunteers]);
-  const demandClusters = useMemo(() => buildDemandClusters(caseRequests), [caseRequests]);
-  const filterOptions = useMemo(() => ({
-    geography: ['All regions', ...Array.from(new Set(caseRequests.map((request) => request.region).filter((region) => region !== 'Region not added'))).sort()],
-    urgency: ['All urgency', 'Critical', 'High', 'Moderate'],
-    needType: ['All needs', ...Array.from(new Set(caseRequests.map((request) => request.needType))).sort()],
-  }), [caseRequests]);
+  const caseRequests = useMemo(
+    () => buildCases(payload?.incomingRequests ?? [], payload?.activeCases ?? [], payload?.externalCases ?? [], volunteers),
+    [payload?.activeCases, payload?.externalCases, payload?.incomingRequests, volunteers]
+  );
+  const demandClusters = useMemo(() => buildDemandClusters(payload?.heatmap ?? []), [payload?.heatmap]);
+  const filterOptions = useMemo(
+    () => ({
+      geography: ['All regions', ...Array.from(new Set(caseRequests.map((request) => request.region).filter((region) => region !== 'Region not added'))).sort()],
+      urgency: ['All urgency', 'Critical', 'High', 'Moderate'],
+      needType: ['All needs', ...Array.from(new Set(caseRequests.map((request) => request.needType))).sort()],
+    }),
+    [caseRequests]
+  );
 
   const filteredCases = useMemo(() => {
     return caseRequests.filter((request) => {
@@ -551,26 +671,35 @@ export function NgoDashboardProvider({ children }: { children: React.ReactNode }
     });
   }, [caseRequests, selectedGeography, selectedNeedType, selectedUrgency]);
 
-  const activeCases = caseRequests.filter(caseNeedsAttention);
+  const activeCases = caseRequests.filter((request) => request.status !== 'Resolved' && request.status !== 'Handled Externally');
   const urgentCases = activeCases.filter((request) => request.urgency === 'Critical').length;
-  const unmetNeeds = activeCases.filter((request) => request.status === 'Unassigned').length;
-  const assignedCases = activeCases.filter((request) => request.status !== 'Unassigned').length;
+  const unmetNeeds = caseRequests.filter((request) => request.status === 'Unassigned').length;
+  const assignedCases = caseRequests.filter((request) => request.status === 'Assigned' || request.status === 'In Progress').length;
   const resolvedThisMonth = buildEffectiveness(caseRequests).resolvedThisMonth;
   const volunteerLookup = useMemo(() => new Map(volunteers.map((volunteer) => [volunteer.id, volunteer])), [volunteers]);
   const selectedAssignmentCase = caseRequests.find((request) => request.id === assignmentTarget) ?? null;
   const categoryBreakdown = useMemo(() => buildCategoryBreakdown(caseRequests), [caseRequests]);
   const recentActivity = useMemo(() => buildRecentActivity(caseRequests, volunteers), [caseRequests, volunteers]);
   const effectiveness = useMemo(() => buildEffectiveness(caseRequests), [caseRequests]);
+  const incomingPatientConnections = useMemo(
+    () => patientConnections.filter((request) => request.status === 'pending'),
+    [patientConnections]
+  );
+  const connectedPatients = useMemo(
+    () => patientConnections.filter((request) => request.status === 'accepted'),
+    [patientConnections]
+  );
 
   const assignVolunteer = useCallback(async (caseId: string, volunteerId: string) => {
+    const ngoId = asString(payload?.ngo.organizationId) || profile?.uid;
     const response = await fetch('/api/tasks', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'assign_ngo_candidate',
         taskId: caseId,
-        assignedVolunteerId: volunteerId,
-        status: 'assigned',
-        lastInterventionAt: new Date().toISOString(),
+        ngoId,
+        volunteerId,
       }),
     });
     const data = await response.json();
@@ -580,6 +709,63 @@ export function NgoDashboardProvider({ children }: { children: React.ReactNode }
     }
 
     setAssignmentTarget(null);
+    await refreshDashboard();
+  }, [payload?.ngo.organizationId, profile?.uid, refreshDashboard]);
+
+  const deleteCase = useCallback(async (caseId: string) => {
+    const ngoId = asString(payload?.ngo.organizationId) || profile?.uid;
+    const response = await fetch('/api/tasks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'archive',
+        taskId: caseId,
+        actorRole: 'ngo',
+        actorId: ngoId,
+      }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Unable to delete case from dashboard.');
+    }
+
+    await refreshDashboard();
+  }, [payload?.ngo.organizationId, profile?.uid, refreshDashboard]);
+
+  const acceptPatientConnection = useCallback(async (requestId: string) => {
+    const response = await fetch('/api/ngo/connections', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requestId,
+        action: 'accept',
+      }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Unable to accept patient connection.');
+    }
+
+    await refreshDashboard();
+  }, [refreshDashboard]);
+
+  const declinePatientConnection = useCallback(async (requestId: string) => {
+    const response = await fetch('/api/ngo/connections', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requestId,
+        action: 'decline',
+      }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Unable to decline patient connection.');
+    }
+
     await refreshDashboard();
   }, [refreshDashboard]);
 
@@ -603,6 +789,7 @@ export function NgoDashboardProvider({ children }: { children: React.ReactNode }
       assignmentTarget,
       setAssignmentTarget,
       assignVolunteer,
+      deleteCase,
       volunteerLookup,
       volunteers,
       selectedAssignmentCase,
@@ -611,6 +798,11 @@ export function NgoDashboardProvider({ children }: { children: React.ReactNode }
       categoryBreakdown,
       recentActivity,
       effectiveness,
+      patientConnections,
+      incomingPatientConnections,
+      connectedPatients,
+      acceptPatientConnection,
+      declinePatientConnection,
       refreshDashboard,
     }),
     [
@@ -628,6 +820,7 @@ export function NgoDashboardProvider({ children }: { children: React.ReactNode }
       resolvedThisMonth,
       assignmentTarget,
       assignVolunteer,
+      deleteCase,
       volunteerLookup,
       volunteers,
       selectedAssignmentCase,
@@ -636,6 +829,11 @@ export function NgoDashboardProvider({ children }: { children: React.ReactNode }
       categoryBreakdown,
       recentActivity,
       effectiveness,
+      patientConnections,
+      incomingPatientConnections,
+      connectedPatients,
+      acceptPatientConnection,
+      declinePatientConnection,
       refreshDashboard,
     ]
   );

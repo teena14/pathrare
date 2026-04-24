@@ -27,8 +27,8 @@ let alignments: Record<string, { icd_codes: string[]; omim: string[] }> = {};
 function loadIndex() {
   if (diseaseIndex) return;
 
-  const indexPath = path.join(process.cwd(), "data/orphanet/parsed/index.json");
-  const alignPath = path.join(process.cwd(), "data/orphanet/parsed/alignments.json");
+  const indexPath = path.join(process.cwd(), "data", "orphanet", "parsed", "index.json");
+  const alignPath = path.join(process.cwd(), "data", "orphanet", "parsed", "alignments.json");
 
   if (fs.existsSync(indexPath)) {
     diseaseIndex = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
@@ -43,7 +43,14 @@ function loadIndex() {
 
 // ── Step 1: OCR via Google Vision API ─────────────────────────────────────────
 async function runOCR(fileBuffer: Buffer): Promise<string> {
-  const credPath = path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS!);
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credentialsPath) {
+    throw new Error("GOOGLE_APPLICATION_CREDENTIALS is not configured.");
+  }
+
+  const credPath = path.isAbsolute(credentialsPath)
+    ? credentialsPath
+    : path.join(/* turbopackIgnore: true */ process.cwd(), credentialsPath);
   const creds = JSON.parse(fs.readFileSync(credPath, "utf-8"));
 
   // Get access token from service account
@@ -113,7 +120,14 @@ Return format: ["symptom 1", "symptom 2", ...]`;
 
 // ── Step 3: Embed query via Vertex AI ─────────────────────────────────────────
 async function embedSymptoms(symptoms: string[]): Promise<number[]> {
-  const credPath = path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS!);
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credentialsPath) {
+    throw new Error("GOOGLE_APPLICATION_CREDENTIALS is not configured.");
+  }
+
+  const credPath = path.isAbsolute(credentialsPath)
+    ? credentialsPath
+    : path.join(/* turbopackIgnore: true */ process.cwd(), credentialsPath);
   const creds = JSON.parse(fs.readFileSync(credPath, "utf-8"));
 
   const { GoogleAuth } = await import("google-auth-library");

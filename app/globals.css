@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-urbanist), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Segoe UI", "Trebuchet MS", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
   
   /* Primary Colors */
   --color-primary-blue: #0F5DE3;

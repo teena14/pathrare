@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   User,
   onAuthStateChanged,
@@ -18,6 +18,9 @@ interface UserProfile {
   role: string | null;
   isProfileComplete: boolean;
   joinedCircles?: string[];
+  associated_ngo_ids?: string[];
+  availability?: string | number | null;
+  orgName?: string | null;
 }
 
 type GoogleSignInResult =
@@ -57,21 +60,40 @@ function getRoleDashboard(role: string | null): string {
   }
 }
 
+function normalizeProfileData(user: User, profile: UserProfile | null): UserProfile | null {
+  if (!profile) {
+    return null;
+  }
+
+  return {
+    ...profile,
+    uid: user.uid,
+    email: user.email ? user.email.toLowerCase() : profile.email,
+    displayName: profile.displayName ?? user.displayName,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const authRequestIdRef = useRef(0);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      const requestId = ++authRequestIdRef.current;
       setUser(firebaseUser);
 
       if (firebaseUser) {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDoc = await getDoc(userDocRef);
 
+        if (authRequestIdRef.current !== requestId || auth.currentUser?.uid !== firebaseUser.uid) {
+          return;
+        }
+
         if (userDoc.exists()) {
-          setProfile(userDoc.data() as UserProfile);
+          setProfile(normalizeProfileData(firebaseUser, userDoc.data() as UserProfile));
         } else {
           setProfile((prev) => prev?.uid === firebaseUser.uid ? prev : null);
         }
@@ -105,11 +127,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         displayName: result.user.displayName,
         role,
         isProfileComplete: false,
-        joinedCircles: []
+        joinedCircles: [],
+        associated_ngo_ids: role === 'volunteer' ? [] : undefined,
+        availability: role === 'volunteer' ? 'available' : null,
       };
 
       await setDoc(userDocRef, {
         ...newProfile,
+        email: result.user.email ? result.user.email.toLowerCase() : null,
         createdAt: new Date().toISOString()
       });
 
@@ -134,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    setProfile(existingProfile);
+    setProfile(normalizeProfileData(result.user, existingProfile));
 
     return {
       status: 'existing-user',
@@ -159,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
 
-    const nextProfile = userDoc.data() as UserProfile;
+    const nextProfile = normalizeProfileData(currentUser, userDoc.data() as UserProfile);
     setProfile(nextProfile);
     return nextProfile;
   };

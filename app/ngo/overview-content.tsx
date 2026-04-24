@@ -14,8 +14,22 @@ import {
   Users,
 } from 'lucide-react';
 import { useNgoDashboard } from './ngo-dashboard-context';
+import { compactPatientConnectionSummary } from '@/lib/ngo-support';
 
 const NgoHeatMap = dynamic(() => import('./NgoHeatMap'), { ssr: false });
+
+function formatRelativeTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'just now';
+  }
+
+  const diffDays = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return '1 day ago';
+  if (diffDays < 30) return `${diffDays} days ago`;
+  return 'over 30 days ago';
+}
 
 export function NgoOverviewContent() {
   const {
@@ -29,6 +43,7 @@ export function NgoOverviewContent() {
     demandClusters,
     categoryBreakdown,
     recentActivity,
+    incomingPatientConnections,
   } = useNgoDashboard();
   const activeCases = caseRequests.filter((request) => request.status !== 'Resolved').length;
   const topCluster = demandClusters[0];
@@ -105,7 +120,7 @@ export function NgoOverviewContent() {
                 <h2 className="text-sm font-bold text-dark-slate">Need Heatmap (India)</h2>
                 <Info className="w-4 h-4 text-light-slate" />
               </div>
-              <p className="text-sm text-light-slate font-medium mt-2">Need score</p>
+              <p className="text-sm text-light-slate font-medium mt-2">Priority score</p>
               <div className="flex items-center gap-2 mt-3">
                 <span className="text-sm font-medium text-light-slate">Low</span>
                 {['#fef3c7', '#fed7aa', '#fdba74', '#fb7185', '#e11d48'].map((color) => (
@@ -123,7 +138,7 @@ export function NgoOverviewContent() {
           <NgoHeatMap clusters={demandClusters} />
 
           <p className="text-xs text-light-slate font-medium mt-4 text-right">
-            Need score = case volume, urgency, support availability, and recency of intervention.
+            Priority score = (0.5 × total cases) + (1.5 × urgent cases) + (1.0 × unassigned cases).
           </p>
         </section>
 
@@ -142,7 +157,7 @@ export function NgoOverviewContent() {
                 topCluster ? {
                   icon: MoveUpRight,
                   tone: 'bg-primary-blue text-white',
-                  text: `${topCluster.district} has the highest current Need Score at ${topCluster.intensity}.`,
+                  text: `${topCluster.district} has the highest current priority score at ${topCluster.priorityScore}.`,
                 } : null,
                 topCategory ? {
                   icon: FileText,
@@ -208,6 +223,52 @@ export function NgoOverviewContent() {
               {recentActivity.length === 0 && (
                 <div className="theme-soft rounded-2xl p-4 text-sm font-medium text-light-slate">
                   No real activity has been recorded yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="theme-card rounded-[2rem] p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="theme-title-24 text-dark-slate">Direct NGO Connect</h2>
+              <Link href="/ngo/patients" className="text-sm font-bold text-primary-blue hover:text-blue-700 transition-colors">
+                Manage in Patients
+              </Link>
+            </div>
+
+            <div className="space-y-4">
+              {incomingPatientConnections.slice(0, 4).map((request) => (
+                <div key={request.id} className="theme-soft rounded-[1.6rem] p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-black text-dark-slate">{request.patientName}</p>
+                      <p className="mt-1 text-xs font-medium text-light-slate">{request.patientLocation}</p>
+                    </div>
+                    <span className="rounded-full bg-brand-blue-50 px-2.5 py-1 text-xs font-bold text-primary-blue uppercase">
+                      {request.status}
+                    </span>
+                  </div>
+                  {request.patientCondition && (
+                    <p className="mt-3 text-xs font-bold text-primary-blue">Condition focus: {request.patientCondition}</p>
+                  )}
+                  <p className="mt-3 text-sm font-medium text-dark-slate leading-6">
+                    {compactPatientConnectionSummary(request.patientSummary, request.patientLocation, request.patientCondition)}
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-bold">
+                    <span className="text-light-slate">{request.createdAt ? formatRelativeTime(request.createdAt) : 'just now'}</span>
+                    {request.clinicalProfileUrl ? (
+                      <Link href={request.clinicalProfileUrl} className="text-primary-blue hover:text-blue-700 transition-colors">
+                        Open clinical profile
+                      </Link>
+                    ) : (
+                      <span className="text-light-slate">Clinical profile link will appear here once shared.</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {incomingPatientConnections.length === 0 && (
+                <div className="theme-soft rounded-[1.6rem] p-5 text-sm font-medium text-light-slate">
+                  Patients who connect directly with your NGO from the medical Life Assist tab will appear here with a short summary.
                 </div>
               )}
             </div>

@@ -9,7 +9,7 @@ import { FirebaseError } from 'firebase/app';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 
-type MultiSelectKey = 'focusAreas' | 'skills';
+type MultiSelectKey = 'focusAreas' | 'skills' | 'specializationTags';
 
 type ExtraProfileFields = Record<string, string | string[]>;
 
@@ -49,6 +49,13 @@ const Select = ({ className = '', ...props }: React.SelectHTMLAttributes<HTMLSel
   />
 );
 
+const TextArea = ({ className = '', ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
+  <textarea
+    {...props}
+    className={`w-full bg-surface-50 border-2 border-surface-200 rounded-xl px-4 py-3 text-dark-slate font-medium focus:outline-none focus:border-primary-blue transition-colors text-sm min-h-28 resize-y ${className}`.trim()}
+  />
+);
+
 function PatientFields({ data, set }: { data: ExtraProfileFields; set: (k: string, v: string) => void }) {
   return (
     <>
@@ -76,9 +83,10 @@ function PatientFields({ data, set }: { data: ExtraProfileFields; set: (k: strin
   );
 }
 
-function NGOFields({ data, set }: { data: ExtraProfileFields; set: (k: string, v: string) => void }) {
+function NGOFields({ data, set, organizationId }: { data: ExtraProfileFields; set: (k: string, v: string) => void; organizationId: string }) {
   const areas = ['Financial Aid', 'Legal Aid', 'Medical Support', 'Education', 'Assistive Tech', 'Mental Health', 'Rural Outreach'];
   const selectedAreas = Array.isArray(data.focusAreas) ? data.focusAreas : [];
+  const specializationTags = Array.isArray(data.specializationTags) ? data.specializationTags : [];
 
   return (
     <>
@@ -87,6 +95,9 @@ function NGOFields({ data, set }: { data: ExtraProfileFields; set: (k: string, v
       </Field>
       <Field label="Registration Number">
         <TextInput placeholder="NGO/Trust registration number" value={String(data.regNumber ?? '')} onChange={(e) => set('regNumber', e.target.value)} />
+      </Field>
+      <Field label="Organization Link ID">
+        <TextInput readOnly value={organizationId} className="opacity-70 cursor-not-allowed" />
       </Field>
       <Field label="Region / State">
         <TextInput required placeholder="Primary state of operation" value={String(data.region ?? '')} onChange={(e) => set('region', e.target.value)} />
@@ -114,6 +125,20 @@ function NGOFields({ data, set }: { data: ExtraProfileFields; set: (k: string, v
           ))}
         </div>
       </Field>
+      <Field label="Specialization Summary">
+        <TextArea
+          placeholder="Describe the conditions, communities, or medical support areas your organisation specializes in."
+          value={String(data.specializationSummary ?? '')}
+          onChange={(e) => set('specializationSummary', e.target.value)}
+        />
+      </Field>
+      <Field label="Specialization Tags">
+        <TextInput
+          placeholder="e.g. rare disease, pompe disease, neuromuscular, pediatric care"
+          value={specializationTags.join(', ')}
+          onChange={(e) => set('specializationTags', e.target.value)}
+        />
+      </Field>
     </>
   );
 }
@@ -130,8 +155,15 @@ function VolunteerFields({ data, set }: { data: ExtraProfileFields; set: (k: str
       <Field label="Languages Spoken">
         <TextInput placeholder="e.g. Hindi, English, Tamil" value={String(data.languages ?? '')} onChange={(e) => set('languages', e.target.value)} />
       </Field>
-      <Field label="Availability (hours per week)">
-        <TextInput type="number" min="1" max="40" placeholder="e.g. 5" value={String(data.availability ?? '')} onChange={(e) => set('availability', e.target.value)} />
+      <Field label="Availability Status">
+        <Select value={String(data.availability ?? 'available')} onChange={(e) => set('availability', e.target.value)}>
+          <option value="available">Available</option>
+          <option value="busy">Busy</option>
+          <option value="offline">Offline</option>
+        </Select>
+      </Field>
+      <Field label="Weekly Capacity (hours, optional)">
+        <TextInput type="number" min="1" max="40" placeholder="e.g. 5" value={String(data.weeklyCapacityHours ?? '')} onChange={(e) => set('weeklyCapacityHours', e.target.value)} />
       </Field>
       <Field label="Skills">
         <div className="flex flex-wrap gap-2 pt-1">
@@ -191,6 +223,7 @@ export default function CompleteProfilePage() {
   const [error, setError] = useState('');
 
   const role = profile?.role ?? null;
+  const isEditingExistingProfile = Boolean(profile?.isProfileComplete);
   const initialNameParts = useMemo(() => getInitialNameParts(profile?.displayName ?? user?.displayName), [profile?.displayName, user?.displayName]);
   const profileDefaults = useMemo(() => {
     const profileRecord = profile as Record<string, unknown> | null;
@@ -236,6 +269,19 @@ export default function CompleteProfilePage() {
 
   const setField = (key: string, value: string) => {
     const multiSelectFields: MultiSelectKey[] = ['focusAreas', 'skills'];
+    if (key === 'specializationTags') {
+      setExtra((prev) => ({
+        ...prev,
+        specializationTags: value
+          ? value
+              .split(/[,|\n]/)
+              .map((entry) => entry.trim())
+              .filter(Boolean)
+          : [],
+      }));
+      return;
+    }
+
     if (multiSelectFields.includes(key as MultiSelectKey)) {
       setExtra((prev) => ({ ...prev, [key]: value ? value.split('|') : [] }));
       return;
@@ -268,6 +314,11 @@ export default function CompleteProfilePage() {
         displayName: `${effectiveFirstName} ${effectiveLastName}`.trim(),
         isProfileComplete: true,
         ...effectiveExtra,
+        organization_id: role === 'ngo' ? user.uid : null,
+        focus_tags: Array.isArray(effectiveExtra.focusAreas) ? effectiveExtra.focusAreas : [],
+        associated_ngo_ids: Array.isArray(effectiveExtra.associated_ngo_ids)
+          ? effectiveExtra.associated_ngo_ids
+          : [],
       });
 
       const refreshedProfile = await refreshProfile();
@@ -329,9 +380,9 @@ export default function CompleteProfilePage() {
       >
         <div className="mb-8">
           <div className="inline-block px-3 py-1 rounded-full bg-primary-blue/10 text-primary-blue text-xs font-bold mb-4">
-            {roleLabels[role] ?? role}
+            {isEditingExistingProfile ? `${roleLabels[role] ?? role} Settings` : roleLabels[role] ?? role}
           </div>
-          <h1 className="text-3xl font-bold mb-2 text-dark-slate">Complete your profile</h1>
+          <h1 className="text-3xl font-bold mb-2 text-dark-slate">{isEditingExistingProfile ? 'Edit your profile' : 'Complete your profile'}</h1>
           <p className="text-light-slate font-medium">Tailored for your role - just a few details.</p>
         </div>
 
@@ -373,7 +424,7 @@ export default function CompleteProfilePage() {
 
           <div className="pt-2 border-t border-surface-100 space-y-5">
             {role === 'patient' && <PatientFields data={effectiveExtra} set={setField} />}
-            {role === 'ngo' && <NGOFields data={effectiveExtra} set={setField} />}
+            {role === 'ngo' && <NGOFields data={effectiveExtra} set={setField} organizationId={user.uid} />}
             {role === 'volunteer' && <VolunteerFields data={effectiveExtra} set={setField} />}
           </div>
 
@@ -382,7 +433,7 @@ export default function CompleteProfilePage() {
             disabled={loading}
             className="w-full bg-primary-blue hover:bg-blue-700 text-white font-bold text-lg py-4 rounded-full mt-2 shadow-[0_4px_14px_0_rgba(15,93,227,0.39)] transition-all hover:-translate-y-0.5 disabled:opacity-50"
           >
-            {loading ? 'Saving...' : 'Enter Dashboard'}
+            {loading ? 'Saving...' : isEditingExistingProfile ? 'Save changes' : 'Enter Dashboard'}
           </button>
         </form>
       </motion.div>

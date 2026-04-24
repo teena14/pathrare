@@ -1,10 +1,13 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
+import { db } from '@/lib/firebase';
+import { getAssociatedNgoIds, toAvailabilityLabel } from '@/lib/ngo-associations';
 
-export type AvailabilityStatus = 'Available' | 'Focused' | 'Offline';
-export type TaskStatus = 'Assigned' | 'Active' | 'Completed' | 'Open';
+export type AvailabilityStatus = 'Available' | 'Busy' | 'Offline';
+export type TaskStatus = 'Pending' | 'Assigned' | 'Active' | 'Completed' | 'Open';
 
 export type VolunteerTask = {
   id: string;
@@ -16,6 +19,7 @@ export type VolunteerTask = {
   estimatedTime: string;
   source: 'NGO assigned' | 'Independent pool';
   skills: string[];
+  ngoId?: string | null;
   assignedVolunteer?: string;
   caseLocked?: boolean;
   userNotice?: string;
@@ -28,58 +32,13 @@ export type ChatMessage = {
   timestamp: string;
 };
 
-const INITIAL_TASKS: VolunteerTask[] = [
-  {
-    id: 'task-201',
-    title: 'Help caregiver complete PM-JAY eligibility documents',
-    summary: 'Guide the family through missing form fields and upload checklist for scheme access.',
-    assistanceType: 'Documentation Support',
-    urgency: 'Critical',
-    status: 'Assigned',
-    estimatedTime: '2 hrs',
-    source: 'NGO assigned',
-    skills: ['Form Filling', 'Documentation', 'Legal Literacy'],
-  },
-  {
-    id: 'task-202',
-    title: 'Explain discharge notes and next referral steps',
-    summary: 'Break down the report, clarify next appointments, and outline where to go next.',
-    assistanceType: 'Care Guidance',
-    urgency: 'High',
-    status: 'Open',
-    estimatedTime: '45 min',
-    source: 'Independent pool',
-    skills: ['Care Navigation', 'Counselling'],
-  },
-  {
-    id: 'task-203',
-    title: 'Locate urgent travel support for specialist visit',
-    summary: 'Help family identify transport and reimbursement options before tomorrow morning.',
-    assistanceType: 'Financial Assistance',
-    urgency: 'Critical',
-    status: 'Open',
-    estimatedTime: '1 hr',
-    source: 'Independent pool',
-    skills: ['Scheme Awareness', 'Documentation'],
-  },
-];
-
-const INITIAL_CHAT_THREADS: Record<string, ChatMessage[]> = {
-  'task-201': [
-    {
-      id: 'msg-1',
-      author: 'system',
-      body: "You've been matched with a support navigator. Case chat is now active.",
-      timestamp: '09:02',
-    },
-  ],
-};
-
 type VolunteerDashboardContextValue = {
+  loading: boolean;
   name: string;
   isNgoLinked: boolean;
+  associatedNgoIds: string[];
   availability: AvailabilityStatus;
-  setAvailability: (value: AvailabilityStatus) => void;
+  setAvailability: (value: AvailabilityStatus) => Promise<void>;
   tasks: VolunteerTask[];
   assignedTasks: VolunteerTask[];
   openTasks: VolunteerTask[];
@@ -90,13 +49,38 @@ type VolunteerDashboardContextValue = {
   setSelectedTaskId: (value: string) => void;
   selectedTask: VolunteerTask | null;
   chatMessages: ChatMessage[];
-  acceptTask: (taskId: string) => void;
-  startTask: (taskId: string) => void;
-  completeTask: (taskId: string) => void;
-  sendMessage: (body: string) => void;
+  acceptTask: (taskId: string) => Promise<void>;
+  startTask: (taskId: string) => Promise<void>;
+  completeTask: (taskId: string) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  sendMessage: (body: string) => Promise<void>;
+  refreshTasks: () => Promise<void>;
 };
 
 const VolunteerDashboardContext = createContext<VolunteerDashboardContextValue | null>(null);
+
+function mapUrgency(score: unknown): VolunteerTask['urgency'] {
+  const value = Number(score ?? 0);
+  if (value >= 0.85) return 'Critical';
+  if (value >= 0.6) return 'High';
+  return 'Moderate';
+}
+
+function mapStatus(status: unknown, isCandidateOffer: boolean): TaskStatus {
+  const value = String(status ?? '').toLowerCase();
+  if (isCandidateOffer && (value === 'pending' || value === 'open' || value === 'unassigned')) return 'Pending';
+  if (value === 'assigned' || value === 'accepted') return 'Assigned';
+  if (value === 'active' || value === 'in_progress') return 'Active';
+  if (value === 'completed' || value === 'resolved') return 'Completed';
+  return 'Open';
+}
+
+function toTimestamp(value: unknown) {
+  if (typeof value === 'string' && value) {
+    return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return 'Now';
+}
 
 export function urgencyTone(urgency: VolunteerTask['urgency']) {
   if (urgency === 'Critical') return 'bg-primary-blue text-white border-primary-blue';
@@ -105,6 +89,7 @@ export function urgencyTone(urgency: VolunteerTask['urgency']) {
 }
 
 export function statusTone(status: TaskStatus) {
+  if (status === 'Pending') return 'bg-amber-50 text-amber-700';
   if (status === 'Assigned') return 'bg-brand-blue-50 text-primary-blue';
   if (status === 'Active') return 'bg-primary-blue text-white';
   if (status === 'Completed') return 'bg-brand-slate-100 text-light-slate';
@@ -113,112 +98,335 @@ export function statusTone(status: TaskStatus) {
 
 export function VolunteerDashboardProvider({ children }: { children: React.ReactNode }) {
   const { profile } = useAuth();
-  const firstName = (profile as unknown as Record<string, unknown> | null)?.firstName;
+  const profileUid = profile?.uid ?? '';
+  const firstName = (profile as Record<string, unknown> | null)?.firstName;
   const name = (typeof firstName === 'string' && firstName) || profile?.displayName?.split(' ')[0] || 'Volunteer';
-  const isNgoLinked = Boolean((profile as Record<string, unknown> | null)?.orgName);
-  const [availability, setAvailability] = useState<AvailabilityStatus>('Available');
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
-  const [chatThreads, setChatThreads] = useState<Record<string, ChatMessage[]>>(INITIAL_CHAT_THREADS);
-  const [selectedTaskId, setSelectedTaskId] = useState<string>('task-201');
+  const profileRecord = (profile as Record<string, unknown> | null) ?? null;
+  const [loading, setLoading] = useState(true);
+  const [availability, setAvailabilityState] = useState<AvailabilityStatus>(() => toAvailabilityLabel(profileRecord?.availability));
+  const [associatedNgoIds, setAssociatedNgoIds] = useState<string[]>(() => getAssociatedNgoIds(profileRecord));
+  const [tasks, setTasks] = useState<VolunteerTask[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState('');
 
-  const assignedTasks = tasks.filter((task) => task.status === 'Assigned' || task.status === 'Active');
+  const isNgoLinked = associatedNgoIds.length > 0;
+  const assignedTasks = tasks.filter((task) => task.status === 'Pending' || task.status === 'Assigned' || task.status === 'Active');
   const openTasks = tasks.filter((task) => task.status === 'Open');
   const completedTasks = tasks.filter((task) => task.status === 'Completed');
   const selectedTask = tasks.find((task) => task.id === selectedTaskId && task.status !== 'Open') ?? null;
-  const chatMessages = useMemo(() => {
-    return selectedTaskId ? chatThreads[selectedTaskId] ?? [] : [];
-  }, [chatThreads, selectedTaskId]);
-  const canAcceptOpenTasks = !isNgoLinked;
   const hasActiveWork = assignedTasks.some((task) => task.status === 'Assigned' || task.status === 'Active');
+  const canAcceptOpenTasks = availability === 'Available' && !hasActiveWork;
 
-  const acceptTask = useCallback((taskId: string) => {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              status: 'Assigned',
-              assignedVolunteer: name,
-              caseLocked: true,
-              userNotice: "You've been matched with a support navigator.",
-            }
-          : task
-      )
-    );
+  const loadTasks = useCallback(async () => {
+    if (!profileUid) {
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
 
-    setChatThreads((current) => ({
-      ...current,
-      [taskId]: [
-        {
-          id: `${taskId}-system`,
-          author: 'system',
-          body: "You've been matched with a support navigator. Case chat is now active.",
-          timestamp: 'Now',
-        },
-      ],
-    }));
+    const response = await fetch(`/api/tasks?volunteerId=${encodeURIComponent(profileUid)}`, { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Failed to load tasks.');
+    }
 
-    setSelectedTaskId(taskId);
-  }, [name]);
+    const nextTasks = Array.isArray(data.tasks)
+      ? data.tasks.map((task: Record<string, unknown>) => {
+          const isCandidateOffer =
+            typeof task.candidateVolunteerId === 'string' &&
+            task.candidateVolunteerId === profileUid &&
+            !task.assignedVolunteerId;
 
-  const startTask = useCallback((taskId: string) => {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === taskId
-          ? { ...task, status: 'Active', caseLocked: true }
-          : task
-      )
-    );
+          return {
+            id: String(task.id ?? task.task_id),
+            title: String(task.title ?? 'Support request'),
+            summary: String(task.summary ?? task.description ?? ''),
+            assistanceType: String(task.category ?? task.needType ?? 'General support'),
+            urgency: mapUrgency(task.urgency_score),
+            status: mapStatus(task.status, isCandidateOffer),
+            estimatedTime: 'Varies',
+            source: task.ngoId ? 'NGO assigned' : 'Independent pool',
+            skills: Array.isArray(task.required_skills) ? task.required_skills.map(String) : [],
+            ngoId: typeof task.ngoId === 'string' ? task.ngoId : null,
+            assignedVolunteer: typeof task.assignedVolunteerName === 'string' ? task.assignedVolunteerName : undefined,
+            caseLocked: Boolean(task.assignedVolunteerId),
+            userNotice: isCandidateOffer
+              ? 'Your NGO shortlisted this case for you. Accept it to lock the case and notify the patient.'
+              : typeof task.summary === 'string'
+                ? task.summary
+                : undefined,
+          } satisfies VolunteerTask;
+        })
+      : [];
 
-    setChatThreads((current) => ({
-      ...current,
-      [taskId]: [
-        ...(current[taskId] ?? []),
-        {
-          id: `${taskId}-volunteer-start`,
-          author: 'volunteer',
-          body: 'Hello, I have started working on your case. I will guide you through the next steps here, and you can reply whenever you are available.',
-          timestamp: 'Now',
-        },
-      ],
-    }));
+    setTasks(nextTasks);
+    setSelectedTaskId((current) => {
+      if (current && nextTasks.some((task: VolunteerTask) => task.id === current)) return current;
+      return (
+        nextTasks.find(
+          (task: VolunteerTask) => task.status === 'Assigned' || task.status === 'Active' || task.status === 'Completed'
+        )?.id ?? ''
+      );
+    });
+    setLoading(false);
+  }, [profileUid]);
 
-    setSelectedTaskId(taskId);
-  }, []);
+  const loadProfileState = useCallback(async () => {
+    if (!profileUid) {
+      return;
+    }
 
-  const completeTask = useCallback((taskId: string) => {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === taskId
-          ? { ...task, status: 'Completed' }
-          : task
-      )
-    );
-  }, []);
+    const snapshot = await getDoc(doc(db, 'users', profileUid));
+    if (!snapshot.exists()) {
+      return;
+    }
 
-  const sendMessage = useCallback((body: string) => {
-    if (!selectedTaskId || !body.trim()) return;
+    const userData = (snapshot.data() ?? {}) as Record<string, unknown>;
+    setAvailabilityState(toAvailabilityLabel(userData.availability));
+    setAssociatedNgoIds(getAssociatedNgoIds(userData));
+  }, [profileUid]);
 
-    setChatThreads((current) => ({
-      ...current,
-      [selectedTaskId]: [
-        ...(current[selectedTaskId] ?? []),
-        {
-          id: `${selectedTaskId}-${Date.now()}`,
-          author: 'volunteer',
-          body: body.trim(),
-          timestamp: 'Now',
-        },
-      ],
-    }));
+  const loadMessages = useCallback(async () => {
+    if (!selectedTaskId) {
+      setChatMessages([]);
+      return;
+    }
+
+    const response = await fetch(`/api/tasks/${encodeURIComponent(selectedTaskId)}/messages`, { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Failed to load messages.');
+    }
+
+    const nextMessages = Array.isArray(data.messages)
+      ? data.messages.map((message: Record<string, unknown>) => ({
+          id: String(message.id),
+          author: message.author === 'volunteer' || message.author === 'user' ? message.author : 'system',
+          body: String(message.body ?? ''),
+          timestamp: toTimestamp(message.createdAtIso ?? message.createdAt),
+        }))
+      : [];
+
+    setChatMessages(nextMessages);
   }, [selectedTaskId]);
+
+  useEffect(() => {
+    if (!profileUid) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void loadProfileState();
+    }, 0);
+    const interval = window.setInterval(() => {
+      void loadProfileState();
+    }, 12000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(interval);
+    };
+  }, [loadProfileState, profileUid]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        await loadTasks();
+      } catch (error) {
+        if (!cancelled) {
+          console.error(error);
+          setLoading(false);
+        }
+      }
+    };
+
+    void run();
+
+    if (!profileUid) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const interval = window.setInterval(() => {
+      void run();
+    }, 8000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [loadTasks, profileUid]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        await loadMessages();
+      } catch (error) {
+        if (!cancelled) {
+          console.error(error);
+        }
+      }
+    };
+
+    void run();
+
+    if (!selectedTaskId) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const interval = window.setInterval(() => {
+      void run();
+    }, 4000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [loadMessages, selectedTaskId]);
+
+  const persistAvailability = useCallback(async (value: AvailabilityStatus) => {
+    if (!profileUid) return;
+
+    await updateDoc(doc(db, 'users', profileUid), {
+      availability: value.toLowerCase(),
+      updatedAt: new Date().toISOString(),
+    });
+    setAvailabilityState(value);
+  }, [profileUid]);
+
+  const acceptTask = useCallback(async (taskId: string) => {
+    if (!profileUid) return;
+    const response = await fetch('/api/tasks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskId,
+        status: 'assigned',
+        assignedVolunteerId: profileUid,
+        assignedVolunteerName: name,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Failed to accept task.');
+    }
+    setSelectedTaskId(taskId);
+    await loadTasks();
+    await loadProfileState();
+  }, [loadProfileState, loadTasks, name, profileUid]);
+
+  const startTask = useCallback(async (taskId: string) => {
+    if (!profileUid) return;
+    const taskResponse = await fetch('/api/tasks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskId,
+        status: 'in_progress',
+        assignedVolunteerId: profileUid,
+        assignedVolunteerName: name,
+        lastInterventionAt: new Date().toISOString(),
+      }),
+    });
+    const taskData = await taskResponse.json();
+    if (!taskResponse.ok) {
+      throw new Error(taskData.error ?? 'Failed to start task.');
+    }
+
+    const messageResponse = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        author: 'volunteer',
+        senderId: profileUid,
+        senderName: name,
+        body: 'Hello, I have started working on your case. I will guide you through the next steps here, and you can reply whenever you are available.',
+      }),
+    });
+    const messageData = await messageResponse.json();
+    if (!messageResponse.ok) {
+      throw new Error(messageData.error ?? 'Failed to post task-start message.');
+    }
+    setSelectedTaskId(taskId);
+    await loadTasks();
+    await loadMessages();
+  }, [loadMessages, loadTasks, name, profileUid]);
+
+  const completeTask = useCallback(async (taskId: string) => {
+    const response = await fetch('/api/tasks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskId,
+        status: 'completed',
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Failed to complete task.');
+    }
+    await loadTasks();
+    await loadProfileState();
+  }, [loadProfileState, loadTasks]);
+
+  const deleteTask = useCallback(async (taskId: string) => {
+    if (!profileUid) return;
+
+    const response = await fetch('/api/tasks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'archive',
+        taskId,
+        actorRole: 'volunteer',
+        actorId: profileUid,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Failed to delete task from dashboard.');
+    }
+
+    if (selectedTaskId === taskId) {
+      setSelectedTaskId('');
+    }
+    await loadTasks();
+  }, [loadTasks, profileUid, selectedTaskId]);
+
+  const sendMessage = useCallback(async (body: string) => {
+    if (!selectedTaskId || !body.trim() || !profileUid) return;
+    const response = await fetch(`/api/tasks/${encodeURIComponent(selectedTaskId)}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        author: 'volunteer',
+        senderId: profileUid,
+        senderName: name,
+        body: body.trim(),
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Failed to send message.');
+    }
+    await loadMessages();
+  }, [loadMessages, name, profileUid, selectedTaskId]);
 
   const value = useMemo(
     () => ({
+      loading,
       name,
       isNgoLinked,
+      associatedNgoIds,
       availability,
-      setAvailability,
+      setAvailability: persistAvailability,
       tasks,
       assignedTasks,
       openTasks,
@@ -228,15 +436,19 @@ export function VolunteerDashboardProvider({ children }: { children: React.React
       selectedTaskId,
       setSelectedTaskId,
       selectedTask,
-      chatMessages,
+      chatMessages: selectedTaskId ? chatMessages : [],
       acceptTask,
       startTask,
       completeTask,
+      deleteTask,
       sendMessage,
+      refreshTasks: loadTasks,
     }),
     [
+      loading,
       name,
       isNgoLinked,
+      associatedNgoIds,
       availability,
       tasks,
       assignedTasks,
@@ -250,7 +462,10 @@ export function VolunteerDashboardProvider({ children }: { children: React.React
       acceptTask,
       startTask,
       completeTask,
+      deleteTask,
       sendMessage,
+      loadTasks,
+      persistAvailability,
     ]
   );
 

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Filter } from 'lucide-react';
+import { Filter, Trash2 } from 'lucide-react';
 import {
   availabilityTone,
+  CaseStatus,
   statusTone,
   urgencyTone,
   useNgoDashboard,
@@ -16,10 +17,12 @@ export default function NgoCasesPage() {
     setAssignmentTarget,
     selectedAssignmentCase,
     assignVolunteer,
+    deleteCase,
     loading,
     error,
   } = useNgoDashboard();
   const [assignmentError, setAssignmentError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const handleAssignVolunteer = async (caseId: string, volunteerId: string) => {
     setAssignmentError('');
@@ -30,6 +33,8 @@ export default function NgoCasesPage() {
       setAssignmentError(err instanceof Error ? err.message : 'Unable to assign volunteer.');
     }
   };
+
+  const canDeleteCase = (status: CaseStatus) => status === 'Resolved' || status === 'Handled Externally';
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
@@ -51,6 +56,12 @@ export default function NgoCasesPage() {
           </div>
         )}
 
+        {deleteError && (
+          <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">
+            {deleteError}
+          </div>
+        )}
+
         <div className="space-y-4">
           {loading && (
             <div className="theme-soft rounded-[1.8rem] p-5 text-sm font-medium text-light-slate">
@@ -67,12 +78,29 @@ export default function NgoCasesPage() {
           {filteredCases.map((request) => (
             <div key={request.id} className="theme-soft rounded-[1.8rem] p-5 transition-colors hover:border-brand-slate-200">
               <div className="mb-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-bold text-dark-slate">{request.title}</h2>
-                  <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${urgencyTone(request.urgency)}`}>{request.urgency}</span>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusTone(request.status)}`}>{request.status}</span>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-sm font-bold text-dark-slate">{request.title}</h2>
+                    <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${urgencyTone(request.urgency)}`}>{request.urgency}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusTone(request.status)}`}>{request.status}</span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setDeleteError('');
+                      try {
+                        await deleteCase(request.id);
+                      } catch (err: unknown) {
+                        setDeleteError(err instanceof Error ? err.message : 'Unable to delete case from dashboard.');
+                      }
+                    }}
+                    disabled={!canDeleteCase(request.status)}
+                    title={canDeleteCase(request.status) ? 'Delete from dashboard' : 'Only resolved or externally handled cases can be deleted'}
+                    className="rounded-full border border-surface-200 p-2 text-light-slate transition-colors hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-                <p className="mt-2 text-xs font-medium text-light-slate">{request.district} · {request.region}</p>
+                <p className="mt-2 text-xs font-medium text-light-slate">{request.district} - {request.region}</p>
                 <p className="mt-1 text-xs font-bold text-light-slate">
                   Need type - <span className="text-primary-blue">{request.needType}</span>
                 </p>
@@ -131,7 +159,7 @@ export default function NgoCasesPage() {
               <div className="theme-soft rounded-2xl p-4">
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-light-slate">Selected case</p>
                 <p className="mt-2 text-sm font-black text-dark-slate">{selectedAssignmentCase.title}</p>
-                <p className="mt-1 text-xs font-medium text-light-slate">{selectedAssignmentCase.needType} · {selectedAssignmentCase.district}</p>
+                <p className="mt-1 text-xs font-medium text-light-slate">{selectedAssignmentCase.needType} - {selectedAssignmentCase.district}</p>
               </div>
 
               {selectedAssignmentCase.suggestedVolunteerIds.length === 0 && (
@@ -149,7 +177,7 @@ export default function NgoCasesPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-black text-dark-slate">{volunteer.name}</p>
-                        <p className="mt-1 text-xs font-medium text-light-slate">{volunteer.region} · {volunteer.weeklyCapacity}</p>
+                        <p className="mt-1 text-xs font-medium text-light-slate">{volunteer.region} - {volunteer.weeklyCapacity}</p>
                       </div>
                       <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${availabilityTone(volunteer.availability)}`}>{volunteer.availability}</span>
                     </div>

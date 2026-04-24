@@ -2,11 +2,13 @@
 
 import { CheckCircle2, MessageSquareText, ShieldCheck, UserRoundSearch, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/lib/auth-context';
 import { AvailabilityStatus, useVolunteerDashboard } from './volunteer-dashboard-context';
 
 export function VolunteerSharedHeader() {
   const {
     availability,
+    associatedNgoIds,
     assignedTasks,
     canAcceptOpenTasks,
     completedTasks,
@@ -15,6 +17,11 @@ export function VolunteerSharedHeader() {
     setAvailability,
     name,
   } = useVolunteerDashboard();
+  const { profile } = useAuth();
+  const profileRecord = (profile as unknown as Record<string, unknown> | null) ?? null;
+  const ngoName = typeof profileRecord?.orgName === 'string'
+    ? String(profileRecord.orgName)
+    : '';
 
   return (
     <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -26,15 +33,24 @@ export function VolunteerSharedHeader() {
           </div>
           <h1 className="theme-heading-40 text-dark-slate">Welcome, {name}</h1>
           <p className="theme-body mt-2 max-w-2xl text-light-slate">A task-first workspace built for clear action, one case at a time.</p>
+          <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-light-slate">
+            {canAcceptOpenTasks
+              ? associatedNgoIds.length > 0
+                ? `Associations: ${associatedNgoIds.length} NGO${associatedNgoIds.length === 1 ? '' : 's'} linked`
+                : 'Association: Independent volunteer'
+              : associatedNgoIds.length > 0
+                ? `Associations: ${associatedNgoIds.length} NGO${associatedNgoIds.length === 1 ? '' : 's'} linked${ngoName ? `, including ${ngoName}` : ''}`
+                : 'Association: Independent volunteer'}
+          </p>
         </div>
 
         <div className="theme-card min-w-80 rounded-3xl p-4">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-light-slate">Availability status</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
-            {(['Available', 'Focused', 'Offline'] as AvailabilityStatus[]).map((status) => (
+            {(['Available', 'Busy', 'Offline'] as AvailabilityStatus[]).map((status) => (
               <button
                 key={status}
-                onClick={() => setAvailability(status)}
+                onClick={() => void setAvailability(status)}
                 className={`rounded-2xl px-3 py-2 text-sm font-bold transition-all ${
                   availability === status
                     ? 'theme-primary'
@@ -47,7 +63,7 @@ export function VolunteerSharedHeader() {
           </div>
           <p className="mt-3 text-xs font-medium text-light-slate">
             {availability === 'Available' && 'You can receive or accept one task right now.'}
-            {availability === 'Focused' && 'You are finishing current work and should not receive new tasks.'}
+            {availability === 'Busy' && 'You are currently locked to an active case and should not accept another one.'}
             {availability === 'Offline' && 'You will stay out of assignment and open-task matching until you return.'}
           </p>
         </div>

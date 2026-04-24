@@ -13,7 +13,7 @@ import {
   signOut as firebaseSignOut,
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth-context';
 
@@ -68,10 +68,12 @@ export default function AuthPage() {
   };
 
   const checkEmailRoleConflict = async (emailAddr: string) => {
-    const q = query(collection(db, 'users'), where('email', '==', emailAddr));
-    const snap = await getDocs(q);
-    if (!snap.empty) return snap.docs[0].data().role as string;
-    return null;
+    const response = await fetch(`/api/auth/role?email=${encodeURIComponent(emailAddr)}`, { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Unable to look up existing account role.');
+    }
+    return typeof data.role === 'string' ? data.role : null;
   };
 
   const routeAfterLogin = async (uid: string) => {

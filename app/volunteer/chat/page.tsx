@@ -1,12 +1,20 @@
 'use client';
 
-import { BellRing, CircleDot, Clock3, LockKeyhole, MessageSquareText, Send } from 'lucide-react';
-import { useState } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, BellRing, CircleDot, Clock3, LockKeyhole, MessageSquareText, Send } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { defaultPresenceParticipant } from '@/lib/task-chat';
+import { useTaskPresence } from '@/lib/use-task-presence';
 import { statusTone, useVolunteerDashboard } from '../volunteer-dashboard-context';
 import { VolunteerSharedHeader } from '../shared-header';
 
+function presenceTone(isOnline: boolean) {
+  return isOnline ? 'bg-emerald-500' : 'bg-slate-300';
+}
+
 export default function VolunteerChatPage() {
   const [draftMessage, setDraftMessage] = useState('');
+  const typingTimeoutRef = useRef<number | null>(null);
   const {
     tasks,
     selectedTask,
@@ -15,6 +23,53 @@ export default function VolunteerChatPage() {
     chatMessages,
     sendMessage,
   } = useVolunteerDashboard();
+  const { peerPresence, selfPresence, setTyping } = useTaskPresence({
+    taskId: selectedTask?.id ?? '',
+    role: 'volunteer',
+    enabled: Boolean(selectedTask),
+  });
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        window.clearTimeout(typingTimeoutRef.current);
+      }
+      setTyping(false);
+    };
+  }, [setTyping]);
+
+  const volunteerPresence = selfPresence ?? defaultPresenceParticipant('volunteer');
+  const patientPresence = peerPresence ?? defaultPresenceParticipant('user');
+
+  const handleDraftChange = (value: string) => {
+    setDraftMessage(value);
+
+    if (typingTimeoutRef.current) {
+      window.clearTimeout(typingTimeoutRef.current);
+    }
+
+    const hasText = Boolean(value.trim());
+    setTyping(hasText);
+
+    if (hasText) {
+      typingTimeoutRef.current = window.setTimeout(() => {
+        setTyping(false);
+      }, 1500);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    try {
+      await sendMessage(draftMessage);
+      setTyping(false);
+      if (typingTimeoutRef.current) {
+        window.clearTimeout(typingTimeoutRef.current);
+      }
+      setDraftMessage('');
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 py-8">
@@ -55,8 +110,27 @@ export default function VolunteerChatPage() {
             <>
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-brand-slate-100 pb-5">
                 <div>
+                  <div className="mb-4 flex flex-wrap items-center gap-3">
+                    <Link
+                      href="/volunteer"
+                      className="inline-flex items-center gap-2 text-xs font-bold text-light-slate transition-colors hover:text-primary-blue"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Back to assigned work
+                    </Link>
+                  </div>
                   <h2 className="theme-title-24 text-dark-slate">{selectedTask.title}</h2>
                   <p className="theme-body mt-1 text-light-slate">{selectedTask.summary}</p>
+                  <div className="mt-4 flex flex-wrap gap-3 text-xs font-bold text-dark-slate">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-brand-slate-50 px-3 py-2">
+                      <span className={`h-2.5 w-2.5 rounded-full ${presenceTone(volunteerPresence.isOnline)}`} />
+                      You: {volunteerPresence.statusText}
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-brand-slate-50 px-3 py-2">
+                      <span className={`h-2.5 w-2.5 rounded-full ${presenceTone(patientPresence.isOnline)}`} />
+                      {patientPresence.label}: {patientPresence.statusText}
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-light-slate">
                   <Clock3 className="h-3.5 w-3.5" />
@@ -86,6 +160,13 @@ export default function VolunteerChatPage() {
                     <p className="mt-2 text-[11px] font-bold opacity-75">{message.timestamp}</p>
                   </div>
                 ))}
+
+                {patientPresence.isTyping && (
+                  <div className="inline-flex items-center gap-2 rounded-full bg-brand-slate-50 px-3 py-2 text-xs font-bold text-light-slate">
+                    <span className="h-2 w-2 rounded-full bg-primary-blue" />
+                    {patientPresence.label} is typing...
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-brand-slate-100 pt-4">
@@ -95,15 +176,12 @@ export default function VolunteerChatPage() {
                 <div className="flex gap-3">
                   <input
                     value={draftMessage}
-                    onChange={(e) => setDraftMessage(e.target.value)}
+                    onChange={(e) => handleDraftChange(e.target.value)}
                     placeholder="Send the next case-specific update..."
                     className="flex-1 rounded-full border border-brand-slate-100 bg-white px-4 py-3 text-sm font-medium text-dark-slate focus:border-brand-blue-100 focus:outline-none"
                   />
                   <button
-                    onClick={() => {
-                      sendMessage(draftMessage);
-                      setDraftMessage('');
-                    }}
+                    onClick={() => void handleSendMessage()}
                     className="theme-primary rounded-full px-5 py-3 text-sm font-bold"
                   >
                     Send
