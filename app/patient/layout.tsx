@@ -105,10 +105,14 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
       </nav>
 
       {/* ── Page content ───────────────────────────────────────────────────── */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className={`flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${
+        pathname.startsWith('/patient/care')
+          ? 'flex flex-col min-h-0 overflow-hidden py-0'
+          : 'py-6'
+      }`}>
 
-        {/* Back to Dashboard — inside content, only on tab pages */}
-        {isOnTab && (
+        {/* Back to Dashboard — hide on Care tab (chat fills full height) */}
+        {isOnTab && !pathname.startsWith('/patient/care') && (
           <Link
             href="/patient"
             className="inline-flex items-center gap-2 mb-6 text-xs font-bold text-light-slate hover:text-primary-blue transition-colors group"

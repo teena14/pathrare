@@ -112,7 +112,7 @@ const CARDS = [
   },
   {
     title: 'Care',
-    desc: '24/7 guidance grounded in clinical protocols for day-to-day caregiving.',
+    desc: 'AI-powered medical assistant grounded in WHO, NIH, Orphanet, OMIM, Red Cross & India NHM.',
     href: '/patient/care',
     Visual: CareVisual,
   },

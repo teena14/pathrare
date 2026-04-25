@@ -1,0 +1,82 @@
+[
+  {
+    "id": "redcross-anaphylaxis-001",
+    "source": "Red Cross",
+    "category": "first_aid",
+    "title": "Red Cross — Anaphylaxis First Aid",
+    "url": "https://www.redcross.org/take-a-class/first-aid/performing-first-aid/anaphylaxis",
+    "text": "Anaphylaxis is a severe, life-threatening allergic reaction that can occur in rare disease patients (e.g., during enzyme replacement therapy infusions). Red Cross first aid: (1) Call emergency services (112 in India) immediately. (2) Administer epinephrine auto-injector (EpiPen) into the outer thigh — do NOT delay for antihistamines. (3) Lay the person flat with legs elevated unless they have breathing difficulty. (4) If unconscious and not breathing, begin CPR. (5) A second dose of epinephrine may be given after 5-15 minutes if no improvement. Epinephrine is the only first-line treatment — antihistamines and steroids are adjuncts only."
+  },
+  {
+    "id": "redcross-seizure-001",
+    "source": "Red Cross",
+    "category": "first_aid",
+    "title": "Red Cross — Seizure First Aid",
+    "url": "https://www.redcross.org/take-a-class/first-aid/performing-first-aid/seizures",
+    "text": "Seizures are common in many rare neurological and metabolic conditions. Red Cross seizure first aid: (1) Protect the person from injury — clear the area, do not restrain movements. (2) Place something soft under the head. (3) Time the seizure duration. (4) Turn the person onto their side (recovery position) to prevent choking. (5) Do NOT put anything in the mouth. (6) Stay with the person until fully conscious. Call 112 if: seizure lasts more than 5 minutes, person does not regain consciousness, a second seizure follows, or the person is pregnant or diabetic."
+  },
+  {
+    "id": "redcross-cpr-001",
+    "source": "Red Cross",
+    "category": "first_aid",
+    "title": "Red Cross — CPR (Cardiopulmonary Resuscitation)",
+    "url": "https://www.redcross.org/take-a-class/cpr",
+    "text": "CPR is a life-saving technique when someone is unresponsive and not breathing normally. Red Cross CPR steps: (1) Call 112. (2) Place heel of hand on center of chest. (3) Compress at least 2 inches deep, 100-120 compressions per minute. (4) Allow full chest recoil between compressions. (5) If trained: 2 rescue breaths after every 30 compressions (30:2 ratio). (6) If untrained: continuous hands-only compressions. (7) Use AED as soon as available. (8) Continue until emergency services arrive or person shows signs of life."
+  },
+  {
+    "id": "who-metabolic-crisis-001",
+    "source": "WHO",
+    "category": "emergency_care",
+    "title": "WHO Emergency Management — Metabolic Crisis in Inherited Metabolic Disorders",
+    "url": "https://www.who.int/publications/i/item/9789241513609",
+    "text": "Patients with inherited metabolic disorders (IMDs) can develop acute metabolic crises triggered by infection, fasting, surgery, or dietary deviation. Emergency management: (1) Stop all protein intake immediately. (2) Provide high glucose infusion (IV dextrose 10%) to suppress catabolism. (3) Correct electrolyte imbalances. (4) For hyperammonemia: IV sodium benzoate and sodium phenylacetate; consider hemodialysis if ammonia >500 umol/L. (5) For hypoglycemia in fatty acid oxidation defects: IV glucose, avoid fasting. (6) For lactic acidosis in mitochondrial disease: thiamine IV, avoid metformin. Contact a metabolic specialist urgently."
+  },
+  {
+    "id": "who-shock-001",
+    "source": "WHO",
+    "category": "emergency_care",
+    "title": "WHO Emergency Care — Recognition and Management of Shock",
+    "url": "https://www.who.int/publications/i/item/9789241548205",
+    "text": "Shock is life-threatening circulatory failure. WHO recognizes: (1) Hypovolemic shock: IV crystalloids 20 mL/kg bolus. (2) Septic shock: IV antibiotics within 1 hour, vasopressors. (3) Cardiogenic shock (in rare cardiomyopathies): dobutamine, minimize fluids. (4) Anaphylactic shock: epinephrine IM 0.5 mg (1:1000), IV fluids. Recognition signs: altered consciousness, rapid weak pulse, low blood pressure, pale cold clammy skin, capillary refill >3 seconds."
+  },
+  {
+    "id": "who-airway-001",
+    "source": "WHO",
+    "category": "emergency_care",
+    "title": "WHO Emergency Care — Airway Management",
+    "url": "https://www.who.int/teams/integrated-health-services/clinical-services-and-systems/emergency-care",
+    "text": "Airway compromise can occur in rare diseases affecting the head and neck (e.g., MPS Hunter syndrome causing tracheal narrowing, angioedema from C1 inhibitor deficiency). Management: (1) Position patient upright or head-tilt chin-lift if unconscious. (2) Clear airway of secretions. (3) Apply oxygen 15 L/min via non-rebreather mask. (4) For angioedema: IV C1 esterase inhibitor concentrate, icatibant (bradykinin antagonist), or fresh frozen plasma. (5) Intubation may be difficult in MPS patients — have surgical airway (cricothyrotomy) as backup."
+  },
+  {
+    "id": "redcross-hypoglycemia-001",
+    "source": "Red Cross",
+    "category": "first_aid",
+    "title": "Red Cross — Hypoglycemia First Aid",
+    "url": "https://www.redcross.org/take-a-class/first-aid/performing-first-aid/low-blood-sugar",
+    "text": "Hypoglycemia is a common emergency in rare metabolic conditions (MCAD, VLCAD, glycogen storage diseases). First aid: (1) If conscious: give 15g fast-acting sugar — 4 glucose tablets, 150 mL fruit juice, or 3 teaspoons sugar in water. (2) Recheck blood sugar in 15 minutes; repeat if still low. (3) Once improved, give a complex carbohydrate snack. (4) If unconscious: do NOT give anything by mouth — call 112. (5) Glucagon injection if available. (6) IV dextrose 50% is the definitive hospital treatment. Prolonged fasting must be avoided in fatty acid oxidation defects."
+  },
+  {
+    "id": "who-mental-crisis-001",
+    "source": "WHO",
+    "category": "first_aid",
+    "title": "WHO Mental Health First Aid — Psychiatric Crisis",
+    "url": "https://www.who.int/teams/mental-health-and-substance-use/treatment-care/mental-health-first-aid",
+    "text": "Rare disease patients have significantly elevated rates of depression, anxiety, and suicidality due to chronic illness burden, diagnostic odyssey, and social isolation. WHO mental health first aid (ALGEE): (1) Approach, assess, and assist with any crisis. (2) Listen non-judgementally. (3) Give support and information. (4) Encourage appropriate professional help. (5) Encourage other supports. For acute psychiatric emergencies: ensure safety, do not leave the person alone, call emergency services if risk of self-harm is immediate. iCall India helpline: 9152987821."
+  },
+  {
+    "id": "redcross-choking-001",
+    "source": "Red Cross",
+    "category": "first_aid",
+    "title": "Red Cross — Choking First Aid",
+    "url": "https://www.redcross.org/take-a-class/first-aid/performing-first-aid/choking",
+    "text": "Choking is a risk in rare diseases affecting swallowing (dysphagia in MPS, neuromuscular conditions). Red Cross: (1) If they can cough or speak, encourage coughing. (2) If unable to cough or speak: call 112. (3) 5 back blows: lean forward, give 5 firm blows between shoulder blades. (4) 5 abdominal thrusts (Heimlich): stand behind, fist above navel, pull sharply inward and upward. (5) Alternate back blows and abdominal thrusts. (6) If unconscious: begin CPR. For infants: 5 back blows + 5 chest thrusts (NOT abdominal)."
+  },
+  {
+    "id": "who-dehydration-001",
+    "source": "WHO",
+    "category": "emergency_care",
+    "title": "WHO Oral Rehydration Therapy (ORT) Guidelines",
+    "url": "https://www.who.int/publications/i/item/WHO-MCA-17.01",
+    "text": "Dehydration can precipitate acute crises in rare metabolic diseases. WHO ORT for mild-moderate dehydration: WHO ORS — sodium 75 mmol/L, glucose 75 mmol/L; give 75 mL/kg over 4 hours. Signs of severe dehydration requiring IV fluids: sunken eyes, skin turgor >2 seconds, inability to drink, altered consciousness. In metabolic disease patients: consult metabolic team before any glucose or protein-containing IV fluids. IV Ringer's lactate may worsen lactic acidosis in mitochondrial disease — use normal saline."
+  }
+]

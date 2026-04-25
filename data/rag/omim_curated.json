@@ -1,0 +1,98 @@
+[
+  {
+    "id": "omim-gaucher-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #230800 — Gaucher Disease Type 1",
+    "url": "https://www.omim.org/entry/230800",
+    "text": "Gaucher disease type 1 (OMIM #230800) is the most common lysosomal storage disorder, caused by mutations in the GBA gene encoding glucocerebrosidase. Inheritance is autosomal recessive. Prevalence is approximately 1:40,000 in the general population and 1:800 in the Ashkenazi Jewish population. Clinical features include hepatosplenomegaly, bone pain and fractures, anemia, thrombocytopenia, and fatigue. The N370S mutation (most common in Ashkenazi Jews) is associated with non-neuronopathic type 1. Diagnosis: reduced glucocerebrosidase enzyme activity in leukocytes; confirmed by GBA gene sequencing. Biomarker: elevated lyso-Gb1 and chitotriosidase. Treatment: enzyme replacement therapy (imiglucerase, velaglucerase alfa, taliglucerase alfa) or substrate reduction therapy (miglustat, eliglustat)."
+  },
+  {
+    "id": "omim-fabry-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #301500 — Fabry Disease",
+    "url": "https://www.omim.org/entry/301500",
+    "text": "Fabry disease (OMIM #301500) is an X-linked lysosomal storage disorder caused by mutations in the GLA gene encoding alpha-galactosidase A. Hemizygous males are severely affected; heterozygous females have variable penetrance. Prevalence: approximately 1:40,000-60,000 in males. Clinical features: neuropathic pain (acroparesthesia), angiokeratoma, cornea verticillata, hypohidrosis, renal failure, cardiomyopathy (LVH), and stroke. Diagnosis: reduced alpha-galactosidase A enzyme activity in leukocytes (males); GLA gene sequencing (females and for confirmation). Biomarker: elevated plasma and urine lyso-Gb3. Treatment: enzyme replacement therapy (agalsidase alfa, agalsidase beta), migalastat (pharmacological chaperone for amenable mutations), plus cardiac, renal, and neurological supportive care."
+  },
+  {
+    "id": "omim-pompe-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #232300 — Pompe Disease (Glycogen Storage Disease Type II)",
+    "url": "https://www.omim.org/entry/232300",
+    "text": "Pompe disease (OMIM #232300) is caused by mutations in the GAA gene encoding acid alpha-glucosidase. Autosomal recessive. Prevalence: approximately 1:40,000. Classic infantile form: hypotonia, cardiomegaly, respiratory failure within first year. Late-onset form: progressive proximal myopathy, respiratory insufficiency without cardiomyopathy. Diagnosis: dried blood spot (DBS) GAA enzyme activity, confirmed by GAA gene sequencing. Included in newborn screening panels in many countries. Treatment: enzyme replacement therapy with alglucosidase alfa (Myozyme/Lumizyme) or cipaglucosidase alfa + miglustat (next-generation). Respiratory monitoring and ventilatory support are critical. Patients should avoid prolonged fasting."
+  },
+  {
+    "id": "omim-mps1-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #607014 — Mucopolysaccharidosis Type I (Hurler/Scheie Syndrome)",
+    "url": "https://www.omim.org/entry/607014",
+    "text": "Mucopolysaccharidosis type I (MPS I, OMIM #607014) is caused by mutations in the IDUA gene encoding alpha-L-iduronidase. Autosomal recessive. Three clinical subtypes: Hurler (severe), Hurler-Scheie (intermediate), Scheie (attenuated). Clinical features: coarse facies, corneal clouding, hepatosplenomegaly, dysostosis multiplex (skeletal dysplasia), cardiac valve disease, obstructive airway disease, carpal tunnel syndrome, and neurological regression (Hurler). Diagnosis: elevated urinary dermatan sulfate and heparan sulfate; reduced IDUA enzyme activity; IDUA gene sequencing. Treatment: hematopoietic stem cell transplantation (HSCT) is preferred for Hurler if done before age 2.5; enzyme replacement therapy (laronidase) for all subtypes. Airway management is challenging — tracheal intubation may be difficult."
+  },
+  {
+    "id": "omim-wilson-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #277900 — Wilson Disease",
+    "url": "https://www.omim.org/entry/277900",
+    "text": "Wilson disease (OMIM #277900) is caused by mutations in the ATP7B gene encoding a copper-transporting ATPase. Autosomal recessive. Prevalence: 1:30,000. Onset typically age 5-35 years. Clinical features: hepatic (hepatitis, cirrhosis, acute liver failure), neurological (tremor, dysarthria, dysphagia, psychiatric symptoms), and Kayser-Fleischer rings (copper deposits in cornea visible on slit-lamp). Diagnosis: serum ceruloplasmin (low), 24-hour urine copper (elevated), liver biopsy copper content, ATP7B gene sequencing. Treatment: D-penicillamine or trientine (copper chelation) or zinc acetate (reduces absorption). Dietary copper restriction. Liver transplantation for acute liver failure or decompensated cirrhosis. Lifelong treatment is required — abrupt discontinuation can cause acute liver failure."
+  },
+  {
+    "id": "omim-marfan-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #154700 — Marfan Syndrome",
+    "url": "https://www.omim.org/entry/154700",
+    "text": "Marfan syndrome (OMIM #154700) is caused by mutations in the FBN1 gene encoding fibrillin-1. Autosomal dominant. Prevalence: 1:5,000-10,000. Clinical features include tall stature with disproportionately long limbs and fingers (arachnodactyly), scoliosis, pectus deformities, ectopia lentis (lens dislocation), and aortic root dilation (risk of dissection). Diagnosis: Ghent criteria (clinical + genetic). Treatment: aortic root monitoring with echocardiography (every 6-12 months), beta-blockers (atenolol) and/or ARBs (losartan) to slow aortic dilation, surgical aortic root replacement when root diameter >4.5-5 cm. Avoid contact sports and extreme physical exertion. Dura ectasia in lumbar spine is a common complication."
+  },
+  {
+    "id": "omim-pku-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #261600 — Phenylketonuria (PKU)",
+    "url": "https://www.omim.org/entry/261600",
+    "text": "Phenylketonuria (PKU, OMIM #261600) is caused by mutations in the PAH gene encoding phenylalanine hydroxylase. Autosomal recessive. Prevalence: approximately 1:10,000-15,000. Without treatment, elevated phenylalanine causes irreversible intellectual disability, microcephaly, and behavioral problems. Diagnosis by newborn screening (Guthrie test or tandem MS). Treatment: lifelong phenylalanine-restricted diet with medical formula supplementation. Sapropterin (BH4 cofactor) is effective for BH4-responsive PKU (~20-50% of patients). Pegvaliase (PEGylated PAH enzyme) is approved for adults. Blood phenylalanine levels should be maintained at 120-360 umol/L. Maternal PKU (pregnancy in affected women) requires very strict phenylalanine control to prevent fetal harm."
+  },
+  {
+    "id": "omim-huntington-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #143100 — Huntington Disease",
+    "url": "https://www.omim.org/entry/143100",
+    "text": "Huntington disease (OMIM #143100) is caused by a CAG trinucleotide repeat expansion in the HTT gene (>36 repeats). Autosomal dominant. Prevalence: 5-10 per 100,000. Age of onset typically 30-50 years (juvenile onset if >60 repeats). Clinical features: involuntary choreiform movements, cognitive decline (dementia), and psychiatric symptoms (depression, irritability, obsessive-compulsive behavior). Diagnosis: genetic testing for CAG repeat number. Treatment: symptomatic only — tetrabenazine or deutetrabenazine for chorea; antidepressants, antipsychotics for psychiatric symptoms; physiotherapy, speech therapy, nutritional support. Genetic counselling is essential for at-risk family members. Predictive testing involves psychological preparation and counselling."
+  },
+  {
+    "id": "omim-als-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #105400 — Amyotrophic Lateral Sclerosis (ALS)",
+    "url": "https://www.omim.org/entry/105400",
+    "text": "Amyotrophic Lateral Sclerosis (ALS, OMIM #105400) involves degeneration of upper and lower motor neurons. Most cases are sporadic; ~10% are familial (SOD1, C9orf72, FUS, TARDBP mutations). Prevalence: 4-6 per 100,000. Median survival 2-5 years from symptom onset. Clinical features: progressive muscle weakness and atrophy, dysphagia, dysarthria, dyspnea, fasciculations. Diagnosis: El Escorial criteria (clinical + EMG + MRI to exclude other causes). Treatment: riluzole (modestly slows progression) and edaravone (for selected patients with early-stage disease). Non-invasive ventilation (BiPAP) improves quality of life and extends survival. Percutaneous endoscopic gastrostomy (PEG) for dysphagia and nutritional support. Multidisciplinary ALS clinic is the gold standard of care."
+  },
+  {
+    "id": "omim-sma-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #253300 — Spinal Muscular Atrophy (SMA)",
+    "url": "https://www.omim.org/entry/253300",
+    "text": "Spinal Muscular Atrophy (SMA, OMIM #253300) is caused by deletions or mutations in the SMN1 gene. Autosomal recessive. Prevalence: 1:10,000. Types: SMA Type 1 (most severe, onset <6 months, never sits), Type 2 (onset 6-18 months, never walks), Type 3 (onset >18 months, ambulant), Type 4 (adult onset). SMN2 copy number modifies disease severity. Treatment has been revolutionized: nusinersen (intrathecal antisense oligonucleotide), onasemnogene abeparvovec-xioi (gene therapy, approved for <2 years or <21 kg), risdiplam (oral SMN2 splicing modifier). Pre-symptomatic treatment (via newborn screening) results in dramatically better outcomes. Respiratory support and nutritional management are critical."
+  },
+  {
+    "id": "omim-cf-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #219700 — Cystic Fibrosis",
+    "url": "https://www.omim.org/entry/219700",
+    "text": "Cystic fibrosis (CF, OMIM #219700) is caused by mutations in the CFTR gene. Autosomal recessive. Prevalence: approximately 1:2,500-3,500 in Caucasians (lower in Asian populations). Clinical features: recurrent pulmonary infections, bronchiectasis, exocrine pancreatic insufficiency, meconium ileus, male infertility (bilateral absence of vas deferens), and CF-related diabetes. Most common mutation: F508del (>70% of CF alleles). Diagnosis: sweat chloride test >60 mmol/L, confirmed by CFTR gene sequencing. Treatment: CFTR modulator therapy (ivacaftor, lumacaftor-ivacaftor, tezacaftor-ivacaftor, elexacaftor-tezacaftor-ivacaftor/Trikafta) has transformed outcomes for eligible genotypes. Standard care: airway clearance therapy, antibiotics, pancreatic enzyme replacement, fat-soluble vitamin supplementation."
+  },
+  {
+    "id": "omim-dmd-001",
+    "source": "OMIM",
+    "category": "rare_disease_omim",
+    "title": "OMIM #310200 — Duchenne Muscular Dystrophy (DMD)",
+    "url": "https://www.omim.org/entry/310200",
+    "text": "Duchenne muscular dystrophy (DMD, OMIM #310200) is caused by mutations in the DMD gene on chromosome X. X-linked recessive. Prevalence: 1:3,500-5,000 male births. Clinical features: progressive muscle weakness beginning by age 5, loss of ambulation by age 12, cardiomyopathy, and respiratory failure. Diagnosis: elevated serum CK, muscle biopsy (absent dystrophin staining), DMD gene deletion/duplication analysis, sequencing. Treatment: corticosteroids (deflazacort or prednisolone) remain the cornerstone — delay loss of ambulation by 2-3 years. Exon-skipping therapies (eteplirsen for exon 51, golodirsen for exon 53, viltolarsen for exon 53) restore partial dystrophin. Cardiac monitoring (ACE inhibitors/ARBs for cardiomyopathy) and respiratory support (NIV) are essential. Multidisciplinary care at a neuromuscular centre."
+  }
+]

@@ -1,0 +1,146 @@
+[
+  {
+    "id": "who-rare-001",
+    "source": "WHO",
+    "category": "clinical_guidelines",
+    "title": "WHO Definition of Rare Diseases",
+    "url": "https://www.who.int/news-room/questions-and-answers/item/rare-diseases",
+    "text": "A rare disease is generally defined as one affecting fewer than 1 in 2,000 people in the general population. According to the World Health Organization (WHO), there are between 6,000 and 8,000 known rare diseases, and approximately 300 million people worldwide are living with a rare disease. About 80% of rare diseases are genetic in origin, and many are life-threatening or chronically debilitating. Most rare diseases begin in childhood. WHO emphasizes that early diagnosis, access to treatment, and cross-border collaboration are critical pillars of rare disease management."
+  },
+  {
+    "id": "who-rare-002",
+    "source": "WHO",
+    "category": "clinical_guidelines",
+    "title": "WHO Essential Medicines for Rare Diseases",
+    "url": "https://www.who.int/news-room/fact-sheets/detail/rare-diseases",
+    "text": "The WHO Model List of Essential Medicines includes a growing number of medicines for rare diseases, including enzyme replacement therapies, substrate reduction therapies, and gene therapies. WHO advocates for equitable access to these medicines, particularly in low- and middle-income countries. Orphan drugs are developed under special regulatory frameworks that incentivize pharmaceutical companies to develop treatments for rare conditions."
+  },
+  {
+    "id": "who-genetics-001",
+    "source": "WHO",
+    "category": "clinical_guidelines",
+    "title": "WHO Genetic Testing and Counselling Guidelines",
+    "url": "https://www.who.int/publications/i/item/9789240007789",
+    "text": "WHO recommends that genetic counselling be offered to individuals and families who may be at risk of an inherited condition. Genetic testing for rare diseases should be paired with pre-test and post-test counselling. Cascade screening of family members is recommended when an autosomal dominant, autosomal recessive, or X-linked condition is identified. Whole exome sequencing (WES) and whole genome sequencing (WGS) are increasingly used for undiagnosed rare disease cases."
+  },
+  {
+    "id": "who-emergency-001",
+    "source": "WHO",
+    "category": "emergency_care",
+    "title": "WHO Emergency Care — Recognizing Clinical Deterioration",
+    "url": "https://www.who.int/teams/integrated-health-services/clinical-services-and-systems/emergency-care",
+    "text": "WHO emergency care guidelines emphasize the ABCDE approach for all critically ill patients: Airway, Breathing, Circulation, Disability (neurological), and Exposure. For patients with rare metabolic diseases, clinical deterioration may be triggered by infection, fasting, surgery, or physiological stress. Early recognition of metabolic crises, hypoglycemia, lactic acidosis, and hyperammonemia is essential. Healthcare providers should be alerted that standard treatments may be contraindicated in certain rare disease patients."
+  },
+  {
+    "id": "who-ncd-001",
+    "source": "WHO",
+    "category": "clinical_guidelines",
+    "title": "WHO Non-communicable Diseases — Multimorbidity Management",
+    "url": "https://www.who.int/news-room/fact-sheets/detail/noncommunicable-diseases",
+    "text": "Patients with rare diseases often carry a significant burden of multimorbidity. WHO recommends an integrated person-centred care approach, coordinating care across specialties, managing polypharmacy risks, and supporting mental health alongside physical health. Multidisciplinary teams (MDTs) are the gold standard for rare disease case management, typically including a specialist physician, clinical geneticist, physiotherapist, dietitian, and social worker."
+  },
+  {
+    "id": "nih-rare-001",
+    "source": "NIH",
+    "category": "clinical_guidelines",
+    "title": "NIH National Center for Advancing Translational Sciences — Rare Disease Definition and Resources",
+    "url": "https://ncats.nih.gov/research/rare-disease",
+    "text": "The NIH National Center for Advancing Translational Sciences (NCATS) defines a rare disease in the United States as one affecting fewer than 200,000 Americans. NIH's Undiagnosed Diseases Network (UDN) provides diagnostic evaluations for patients with undiagnosed or rare conditions. The NIH Rare Diseases Clinical Research Network (RDCRN) funds research consortia studying over 200 rare diseases. NIH's Genetic and Rare Diseases Information Center (GARD) maintains a publicly searchable database of rare diseases."
+  },
+  {
+    "id": "nih-diagnosis-001",
+    "source": "NIH",
+    "category": "clinical_guidelines",
+    "title": "NIH Diagnostic Workup for Undiagnosed Rare Diseases",
+    "url": "https://www.ncbi.nlm.nih.gov/books/NBK543537/",
+    "text": "NIH recommends a systematic approach to diagnosing undiagnosed rare diseases: (1) thorough clinical history and physical examination, (2) standard biochemical and metabolic workup, (3) targeted gene panel testing based on clinical phenotype, (4) whole exome sequencing (WES) if panel is negative, (5) whole genome sequencing (WGS) for remaining cases, (6) RNA sequencing for variant interpretation. Functional studies may be required to confirm pathogenicity. Phenotype-driven approaches using tools like PhenoDB or Phenomizer can help match HPO terms to candidate diagnoses."
+  },
+  {
+    "id": "nih-lysosomal-001",
+    "source": "NIH",
+    "category": "clinical_guidelines",
+    "title": "NIH Guidelines — Lysosomal Storage Disorders",
+    "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5434395/",
+    "text": "Lysosomal storage disorders (LSDs) are a group of approximately 50 inherited metabolic diseases caused by deficiencies in lysosomal enzymes or transport proteins. Common LSDs include Gaucher disease (GBA gene), Fabry disease (GLA gene), Pompe disease (GAA gene), Niemann-Pick disease, and MPS disorders. Diagnosis is confirmed by enzyme activity assay and/or molecular genetic testing. Enzyme replacement therapy (ERT) is available for several LSDs. Biomarkers such as lyso-Gb1 (Gaucher), lyso-Gb3 (Fabry), and Hex4 (Pompe) are used for monitoring. Newborn screening programs are expanding to include several LSDs."
+  },
+  {
+    "id": "nih-mitochondrial-001",
+    "source": "NIH",
+    "category": "clinical_guidelines",
+    "title": "NIH Guidelines — Mitochondrial Disease",
+    "url": "https://www.ncbi.nlm.nih.gov/books/NBK1224/",
+    "text": "Mitochondrial diseases are caused by mutations in either mitochondrial DNA (mtDNA) or nuclear DNA genes encoding mitochondrial proteins. Clinical features are highly variable but often include myopathy, encephalopathy, lactic acidosis, and stroke-like episodes (MELAS). Diagnosis involves serum lactate, pyruvate, amino acid profile, urine organic acids, muscle biopsy with respiratory chain enzyme analysis, and mitochondrial genome sequencing. Treatment is primarily supportive. Certain vitamins and cofactors (CoQ10, riboflavin, thiamine) may be beneficial in specific subtypes. Valproate is contraindicated in mitochondrial disease due to risk of hepatic toxicity."
+  },
+  {
+    "id": "nih-connective-001",
+    "source": "NIH",
+    "category": "clinical_guidelines",
+    "title": "NIH Guidelines — Connective Tissue Disorders",
+    "url": "https://rarediseases.info.nih.gov/diseases/categories/connective-tissue-diseases",
+    "text": "Rare connective tissue disorders include Marfan syndrome (FBN1 mutations), Ehlers-Danlos syndrome (multiple gene subtypes), osteogenesis imperfecta (COL1A1/COL1A2), and pseudoxanthoma elasticum (ABCC6). Marfan syndrome requires ophthalmologic, cardiac (aortic root surveillance), and skeletal monitoring. Beta-blockers and ARBs (losartan) are used to slow aortic root dilation. Ehlers-Danlos syndrome management focuses on pain control, joint protection, and physiotherapy. Bisphosphonates reduce fracture risk in osteogenesis imperfecta."
+  },
+  {
+    "id": "cdc-rare-001",
+    "source": "CDC",
+    "category": "clinical_guidelines",
+    "title": "CDC Public Health Approach to Rare Diseases",
+    "url": "https://www.cdc.gov/ncbddd/hemoglobin/hcp.html",
+    "text": "The CDC's National Center on Birth Defects and Developmental Disabilities (NCBDDD) oversees public health programs for several rare diseases including hemoglobinopathies (sickle cell disease, thalassemia), bleeding disorders (hemophilia), and Duchenne muscular dystrophy. CDC's newborn screening quality assurance program supports the detection of over 30 rare conditions at birth. CDC resources include the Hemoglobin Disorders Program, Fragile X Syndrome data and statistics, and surveillance systems for muscular dystrophy."
+  },
+  {
+    "id": "cdc-metabolic-001",
+    "source": "CDC",
+    "category": "clinical_guidelines",
+    "title": "CDC Newborn Screening — Metabolic and Genetic Conditions",
+    "url": "https://www.cdc.gov/newbornscreening/",
+    "text": "CDC supports newborn screening (NBS) as the most effective public health intervention for early identification of rare metabolic, endocrine, and genetic conditions. The Recommended Uniform Screening Panel (RUSP) in the US includes conditions such as PKU (phenylketonuria), MSUD (maple syrup urine disease), galactosemia, congenital hypothyroidism, congenital adrenal hyperplasia, SCID, and spinal muscular atrophy (SMA). Early identification allows treatment to begin before symptoms develop, dramatically improving outcomes."
+  },
+  {
+    "id": "cdc-sickle-001",
+    "source": "CDC",
+    "category": "clinical_guidelines",
+    "title": "CDC Sickle Cell Disease Management Guidelines",
+    "url": "https://www.cdc.gov/sickle-cell/index.html",
+    "text": "Sickle cell disease (SCD) is the most common genetic blood disorder worldwide. CDC guidelines emphasize: (1) penicillin prophylaxis from 2 months of age for infection prevention, (2) hydroxyurea therapy to reduce vaso-occlusive crises, (3) transcranial Doppler screening for stroke risk, (4) pneumococcal, meningococcal, and annual influenza vaccination, (5) newborn screening in all states. Acute pain crises should be managed with IV hydration, analgesics (opioids for severe pain), and oxygen. Acute chest syndrome is a medical emergency requiring prompt treatment."
+  },
+  {
+    "id": "cdc-bleeding-001",
+    "source": "CDC",
+    "category": "clinical_guidelines",
+    "title": "CDC Hemophilia and Bleeding Disorders — Clinical Management",
+    "url": "https://www.cdc.gov/ncbddd/hemophilia/treatment.html",
+    "text": "Hemophilia A and B are X-linked rare bleeding disorders caused by deficiencies of clotting factor VIII and IX respectively. Treatment involves factor replacement therapy (prophylactic or on-demand). Extended half-life factor products reduce infusion frequency. Non-factor therapies (emicizumab/Hemlibra) are approved for hemophilia A with or without inhibitors. Inhibitor development is a major complication requiring immune tolerance induction. All patients should avoid NSAIDs and aspirin. Intramuscular injections should be avoided. Gene therapy is emerging as a curative option."
+  },
+  {
+    "id": "who-nutrition-001",
+    "source": "WHO",
+    "category": "clinical_guidelines",
+    "title": "WHO Nutritional Management in Inherited Metabolic Disorders",
+    "url": "https://www.who.int/publications/i/item/9789241513609",
+    "text": "Dietary management is the cornerstone of treatment for many inherited metabolic disorders (IMDs). For phenylketonuria (PKU): phenylalanine-restricted diet with medical formula. For MSUD: branched-chain amino acid (BCAA)-restricted diet. For galactosemia: galactose-free diet from birth. For homocystinuria: methionine-restricted diet, pyridoxine supplementation. For organic acidemias (MMA, PA): protein-restricted diet with essential amino acid supplements. Regular monitoring of metabolites and nutritional status is essential. Dietitian involvement is mandatory in all IMD management plans."
+  },
+  {
+    "id": "nih-neuro-001",
+    "source": "NIH",
+    "category": "clinical_guidelines",
+    "title": "NIH Neurological Rare Diseases — Diagnosis and Care",
+    "url": "https://www.ninds.nih.gov/health-information/disorders",
+    "text": "The NINDS (National Institute of Neurological Disorders and Stroke) oversees research and clinical guidance for rare neurological diseases. This includes: Huntington's disease (autosomal dominant CAG repeat expansion in HTT gene), Friedreich's ataxia (GAA repeat in FXN gene), spinal muscular atrophy (SMN1 deletions), Charcot-Marie-Tooth disease (PMP22 duplications), and neuromuscular junction disorders like myasthenia gravis. Treatment for SMA has been revolutionized by nusinersen (Spinraza), onasemnogene abeparvovec (Zolgensma), and risdiplam (Evrysdi). Early treatment in pre-symptomatic infants offers the best outcomes."
+  },
+  {
+    "id": "pubmed-diagnosis-001",
+    "source": "PubMed / NIH",
+    "category": "clinical_guidelines",
+    "title": "Diagnostic Delay in Rare Diseases — Clinical Evidence",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/34019797/",
+    "text": "Multiple peer-reviewed studies published in journals indexed by PubMed document that the average diagnostic delay for rare disease patients is 4–8 years from symptom onset. Patients see an average of 7 physicians before receiving a correct diagnosis. Symptoms are frequently misattributed to common conditions. Key factors contributing to diagnostic delay include: low disease prevalence, clinical heterogeneity, lack of specialist awareness, and limited access to genomic testing. Artificial intelligence-assisted phenotyping tools and patient-reported symptom databases are emerging strategies to reduce diagnostic odyssey."
+  },
+  {
+    "id": "who-palliative-001",
+    "source": "WHO",
+    "category": "clinical_guidelines",
+    "title": "WHO Palliative Care for Rare Diseases",
+    "url": "https://www.who.int/news-room/fact-sheets/detail/palliative-care",
+    "text": "WHO recognizes that palliative care is an essential component of comprehensive care for patients with progressive or life-limiting rare diseases. Palliative care aims to improve quality of life through prevention and relief of suffering, early identification and treatment of pain, psychological and spiritual support, and assistance to families. For pediatric rare disease patients with no curative options, WHO recommends early integration of palliative care from the time of diagnosis, not only at end of life. Pain management using the WHO analgesic ladder is applicable."
+  }
+]
