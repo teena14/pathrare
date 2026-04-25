@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { Search, ShieldAlert, HeartPulse } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -48,19 +49,19 @@ export default function Home() {
             {
               title: "Diagnostic Failure",
               desc: "Conditions are frequently misdiagnosed for years. Symptoms overlap, specialists are scarce.",
-              icon: "🔍",
+              icon: <Search className="w-12 h-12 text-primary-blue" />,
               color: "text-primary-blue border-primary-blue"
             },
             {
               title: "Access Failure",
               desc: "Ecosystems of support exist, but they are fragmented, hidden, and entirely undiscoverable.",
-              icon: "🚧",
+              icon: <ShieldAlert className="w-12 h-12 text-pacific-blue" />,
               color: "text-pacific-blue border-pacific-blue"
             },
             {
               title: "Care Failure",
               desc: "Day-to-day caregiving involves constant, high-stakes decisions made with no guidance.",
-              icon: "❤️‍🩹",
+              icon: <HeartPulse className="w-12 h-12 text-medium-purple" />,
               color: "text-medium-purple border-medium-purple"
             }
           ].map((item, i) => (
@@ -72,7 +73,7 @@ export default function Home() {
               viewport={{ once: true }}
               className="glass bg-white p-10 rounded-[2.5rem] flex flex-col gap-5 shadow-xl border border-surface-200 hover:-translate-y-2 transition-transform duration-300"
             >
-              <div className="text-5xl mb-2">{item.icon}</div>
+              <div className="mb-2">{item.icon}</div>
               <h3 className={`text-2xl font-bold ${item.color.split(' ')[0]}`}>{item.title}</h3>
               <p className="text-light-slate font-medium leading-relaxed text-lg">{item.desc}</p>
             </motion.div>

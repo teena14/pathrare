@@ -1,106 +1,83 @@
-import { randomUUID } from 'crypto';
-import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { NextRequest, NextResponse } from "next/server";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { randomBytes } from "crypto";
 
-export const dynamic = 'force-dynamic';
+function getAdminDb() {
+  if (!getApps().length) {
+    initializeApp({ credential: cert({
+      projectId:   process.env.FIREBASE_ADMIN_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+      privateKey:  process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    })});
+  }
+  return getFirestore();
+}
 
-// ── POST: Generate or update share token ───────────────────────────────────────
+function generateToken() {
+  return randomBytes(16).toString("hex");
+}
+
+// ── POST /api/patient/share ───────────────────────────────────────────────────
+// Creates a shareable token for a patient's clinical profile
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { patientId } = body;
+    const { patientId } = await req.json();
+    if (!patientId) return NextResponse.json({ error: "patientId required" }, { status: 400 });
 
-    if (!patientId) {
-      return NextResponse.json(
-        { error: 'patientId is required' },
-        { status: 400 }
-      );
-    }
+    const db    = getAdminDb();
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
 
-    const patientProfileRef = adminDb.collection('patientProfile').doc(patientId);
-    const patientProfile = await patientProfileRef.get();
+    await db.collection("shareTokens").doc(token).set({
+      token,
+      patientId,
+      createdAt: new Date().toISOString(),
+      expiresAt,
+    });
 
-    let shareToken: string;
-
-    if (patientProfile.exists) {
-      const data = patientProfile.data();
-      shareToken = data?.shareToken || randomUUID();
-      
-      await patientProfileRef.update({
-        shareToken,
-        shareEnabled: true,
-        shareCreatedAt: new Date().toISOString(),
-      });
-    } else {
-      shareToken = randomUUID();
-      await patientProfileRef.set({
-        patientId,
-        shareToken,
-        shareEnabled: true,
-        shareCreatedAt: new Date().toISOString(),
-        reportCount: 0,
-        lastReportAt: null,
-      });
-    }
-
-    // Create shared profile record
-    const sharedProfileRef = adminDb.collection('sharedProfile').doc(shareToken);
-    const sharedProfile = await sharedProfileRef.get();
-
-    if (!sharedProfile.exists) {
-      await sharedProfileRef.set({
-        shareToken,
-        patientId,
-        createdAt: new Date().toISOString(),
-        viewCount: 0,
-      });
-    }
-
-    const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/shared/${shareToken}`;
-
-    return NextResponse.json({ shareToken, shareUrl });
-  } catch (error) {
-    console.error('[POST /api/patient/share] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate share link' },
-      { status: 500 }
-    );
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const shareUrl = `${baseUrl}/share/${token}`;
+    return NextResponse.json({ shareUrl, token, expiresAt });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
 
-// ── DELETE: Disable sharing ─────────────────────────────────────────────────────
-export async function DELETE(req: NextRequest) {
+// ── GET /api/patient/share?token=xxx ─────────────────────────────────────────
+// Returns public profile data for the share page
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const patientId = searchParams.get('patientId');
+    const token = req.nextUrl.searchParams.get("token");
+    if (!token) return NextResponse.json({ error: "token required" }, { status: 400 });
 
-    if (!patientId) {
-      return NextResponse.json(
-        { error: 'patientId is required' },
-        { status: 400 }
-      );
-    }
+    const db       = getAdminDb();
+    const tokenDoc = await db.collection("shareTokens").doc(token).get();
+    if (!tokenDoc.exists) return NextResponse.json({ error: "Invalid or expired token" }, { status: 404 });
 
-    const patientProfileRef = adminDb.collection('patientProfile').doc(patientId);
-    const patientProfile = await patientProfileRef.get();
+    const { patientId, expiresAt } = tokenDoc.data()!;
+    if (new Date(expiresAt) < new Date())
+      return NextResponse.json({ error: "Share link has expired" }, { status: 410 });
 
-    if (!patientProfile.exists) {
-      return NextResponse.json(
-        { error: 'Patient profile not found' },
-        { status: 404 }
-      );
-    }
+    // Fetch profile, reports, documents
+    const [userDoc, reportsSnap, docsSnap] = await Promise.all([
+      db.collection("users").doc(patientId).get(),
+      db.collection("reports").where("patientId", "==", patientId).orderBy("createdAt", "desc").limit(20).get(),
+      db.collection("documents").where("patientId", "==", patientId).orderBy("uploadedAt", "desc").limit(20).get(),
+    ]);
 
-    await patientProfileRef.update({
-      shareEnabled: false,
+    const user = userDoc.data() || {};
+    return NextResponse.json({
+      patient: {
+        displayName: user.displayName || "Anonymous Patient",
+        primaryDisease: user.primaryDisease || null,
+        diagnosisStatus: user.diagnosisStatus || null,
+        location: user.location || null,
+      },
+      reports:   reportsSnap.docs.map(d => d.data()),
+      documents: docsSnap.docs.map(d => ({ ...d.data(), storageUrl: d.data().storageUrl })),
     });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('[DELETE /api/patient/share] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to disable sharing' },
-      { status: 500 }
-    );
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }

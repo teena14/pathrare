@@ -360,27 +360,69 @@ JSON only, no markdown:
 }
 
 // ── OCR ────────────────────────────────────────────────────────────────────────
+async function extractWithGemini(fileBuffer: Buffer, mimeType: string, apiKey: string): Promise<string> {
+  const models = await getAvailableModels(apiKey);
+  const b64 = fileBuffer.toString("base64");
+  for (const model of models.slice(0, 2)) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { inline_data: { mime_type: mimeType, data: b64 } },
+            { text: "Extract ALL text from this document verbatim. Include every medical term, diagnosis, symptom, lab value, and code. Output only the raw text, no commentary." }
+          ]}],
+          generationConfig: { temperature: 0, maxOutputTokens: 8192 },
+        }),
+      });
+      const d = await res.json();
+      const text = d.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      if (text.trim()) { console.log(`[OCR] Gemini extracted ${text.length} chars from ${mimeType}`); return text; }
+    } catch (e) { console.warn(`[OCR] Gemini model ${model} failed:`, e); }
+  }
+  return "";
+}
+
 async function runOCR(fileBuffer: Buffer, fileType: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY ?? "";
+  console.log(`[OCR] type=${fileType} size=${fileBuffer.length}b`);
+
   if (fileType === "application/pdf") {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfParse = (await import("pdf-parse" as any)).default;
-      return (await pdfParse(fileBuffer)).text;
-    } catch (e) { console.error("[OCR] pdf-parse error:", e); return ""; }
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const pdfParse = require("pdf-parse");
+      const result = await pdfParse(fileBuffer);
+      const text = result.text?.trim() ?? "";
+      if (text.length > 50) { console.log(`[OCR] pdf-parse: ${text.length} chars`); return text; }
+      console.log("[OCR] pdf-parse returned empty — Gemini fallback");
+    } catch (e) { console.warn("[OCR] pdf-parse failed:", e); }
+    if (apiKey) return extractWithGemini(fileBuffer, "application/pdf", apiKey);
+    return "";
   }
+
   const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (!credentialsPath) throw new Error("GOOGLE_APPLICATION_CREDENTIALS not configured.");
-  const credPath = path.isAbsolute(credentialsPath) ? credentialsPath : path.join(process.cwd(), credentialsPath);
-  const creds = JSON.parse(fs.readFileSync(credPath, "utf-8"));
-  const { GoogleAuth } = await import("google-auth-library");
-  const auth = new GoogleAuth({ credentials: creds, scopes: ["https://www.googleapis.com/auth/cloud-vision"] });
-  const token = await (await auth.getClient()).getAccessToken();
-  const res = await fetch("https://vision.googleapis.com/v1/images:annotate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token.token}` },
-    body: JSON.stringify({ requests: [{ image: { content: fileBuffer.toString("base64") }, features: [{ type: "DOCUMENT_TEXT_DETECTION" }] }] }),
-  });
-  return (await res.json()).responses?.[0]?.fullTextAnnotation?.text ?? "";
+  if (credentialsPath) {
+    try {
+      const credPath = path.isAbsolute(credentialsPath) ? credentialsPath : path.join(process.cwd(), credentialsPath);
+      const creds = JSON.parse(fs.readFileSync(credPath, "utf-8"));
+      const { GoogleAuth } = await import("google-auth-library");
+      const auth = new GoogleAuth({ credentials: creds, scopes: ["https://www.googleapis.com/auth/cloud-vision"] });
+      const token = await (await auth.getClient()).getAccessToken();
+      const vRes = await fetch("https://vision.googleapis.com/v1/images:annotate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token.token}` },
+        body: JSON.stringify({ requests: [{ image: { content: fileBuffer.toString("base64") }, features: [{ type: "DOCUMENT_TEXT_DETECTION" }] }] }),
+      });
+      const vText = (await vRes.json()).responses?.[0]?.fullTextAnnotation?.text ?? "";
+      if (vText.trim()) { console.log(`[OCR] Vision API: ${vText.length} chars`); return vText; }
+      console.log("[OCR] Vision API empty — Gemini fallback");
+    } catch (e) { console.warn("[OCR] Vision API failed:", e); }
+  } else { console.log("[OCR] No GCP creds — using Gemini directly"); }
+
+  const mime = fileType.startsWith("image/") ? fileType : "image/png";
+  if (apiKey) return extractWithGemini(fileBuffer, mime, apiKey);
+  return "";
 }
 
 // ── Gemini helpers ─────────────────────────────────────────────────────────────
@@ -508,7 +550,9 @@ export async function POST(req: NextRequest) {
       } else {
         reportText = await runOCR(buffer, file.type);
       }
-      if (!reportText.trim()) return NextResponse.json({ error: "Could not extract text from file." }, { status: 422 });
+      if (!reportText.trim()) return NextResponse.json({
+        error: "Could not extract text from your document. This can happen with scanned images or password-protected PDFs. Please try the 'Enter Symptoms' tab and describe your symptoms in text instead.",
+      }, { status: 422 });
     } else if (rawSymptoms?.trim()) {
       reportText = rawSymptoms.trim();
     } else {
@@ -559,3 +603,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Diagnostic inference failed." }, { status: 500 });
   }
 }
+
