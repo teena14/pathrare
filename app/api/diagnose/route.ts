@@ -41,8 +41,21 @@ function loadIndex() {
   }
 }
 
-// ── Step 1: OCR via Google Vision API ─────────────────────────────────────────
-async function runOCR(fileBuffer: Buffer): Promise<string> {
+// ── Step 1: OCR via Google Vision API or PDF text extraction ───────────────────
+async function runOCR(fileBuffer: Buffer, fileType: string): Promise<string> {
+  // Handle PDF files with pdf-parse
+  if (fileType === 'application/pdf') {
+    try {
+      const pdfParse = (await import('pdf-parse')).default;
+      const data = await pdfParse(fileBuffer);
+      return data.text;
+    } catch (e) {
+      console.error('[OCR] PDF parse error:', e);
+      return "";
+    }
+  }
+  
+  // Handle images with Google Vision API
   const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (!credentialsPath) {
     throw new Error("GOOGLE_APPLICATION_CREDENTIALS is not configured.");
@@ -84,18 +97,17 @@ async function runOCR(fileBuffer: Buffer): Promise<string> {
   return data.responses?.[0]?.fullTextAnnotation?.text ?? "";
 }
 
-// ── Step 2: Symptom extraction via Gemini ─────────────────────────────────────
+// ── Step 2: Symptom extraction via Gemini ───────────────────────────────────────
 async function extractSymptoms(text: string): Promise<string[]> {
   const apiKey = process.env.GEMINI_API_KEY;
-  const prompt = `You are a medical NLP system. Extract all clinical symptoms and signs from the following medical text.
-Return ONLY a JSON array of symptom strings, using standard medical terminology where possible.
-Text:
-"""${text.slice(0, 4000)}"""
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
 
-Return format: ["symptom 1", "symptom 2", ...]`;
+  const prompt = `Extract clinical symptoms from the following medical report text. Return ONLY a JSON array of symptom strings (no explanations, no formatting). If no clear symptoms are found, return an empty array.
+
+Text: ${text}`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -107,14 +119,107 @@ Return format: ["symptom 1", "symptom 2", ...]`;
   );
 
   const data = await res.json();
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "[]";
-
-  // Strip markdown code fences if present
-  const cleaned = raw.replace(/```json\n?/g, "").replace(/```/g, "").trim();
+  const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+  
   try {
-    return JSON.parse(cleaned);
-  } catch {
-    return [cleaned];
+    const symptoms = JSON.parse(responseText);
+    return Array.isArray(symptoms) ? symptoms : [];
+  } catch (e) {
+    // Try to extract JSON from markdown code blocks
+    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) || responseText.match(/\[([\s\S]*?)\]/);
+    if (jsonMatch) {
+      try {
+        const symptoms = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        return Array.isArray(symptoms) ? symptoms : [];
+      } catch (e2) {
+        console.error('[SYMPTOM] Markdown parse also failed:', e2);
+      }
+    }
+    return [];
+  }
+}
+
+// ── Step 5: Extract diagnosis and compare via single Gemini call ───────────────
+async function extractAndCompare(
+  text: string,
+  aiDiagnosis: string,
+  symptoms: string[]
+): Promise<{
+  reportDiagnosis: string | null;
+  comparison: { matchType: 'matches' | 'differs' | 'no_report_diagnosis'; reasoning: string };
+}> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured.");
+
+  const prompt = `Extract the primary diagnosis from the medical report and compare it with the AI diagnosis.
+
+Medical Report Text:
+${text}
+
+AI Diagnosis: ${aiDiagnosis}
+Symptoms Found: ${symptoms.join(", ")}
+
+Return ONLY a JSON object with this format:
+{
+  "reportDiagnosis": "Diagnosis name from report or null if none mentioned",
+  "matchType": "matches" | "differs" | "no_report_diagnosis",
+  "reasoning": "Brief explanation"
+}
+
+For matchType:
+- "matches" if report diagnosis is same or very similar to AI diagnosis
+- "differs" if report diagnosis is different from AI diagnosis
+- "no_report_diagnosis" if no diagnosis is mentioned in the report`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
+      }),
+    }
+  );
+
+  const data = await res.json();
+  const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+  
+  try {
+    const result = JSON.parse(responseText);
+    return {
+      reportDiagnosis: result.reportDiagnosis || null,
+      comparison: {
+        matchType: result.matchType || 'no_report_diagnosis',
+        reasoning: result.reasoning || 'Unable to generate reasoning.',
+      },
+    };
+  } catch (e) {
+    // Try to extract JSON from markdown code blocks
+    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) || responseText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const result = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        return {
+          reportDiagnosis: result.reportDiagnosis || null,
+          comparison: {
+            matchType: result.matchType || 'no_report_diagnosis',
+            reasoning: result.reasoning || 'Unable to generate reasoning.',
+          },
+        };
+      } catch (e2) {
+        console.error('[COMPARE] Markdown parse also failed:', e2);
+      }
+    }
+    // Fallback
+    return {
+      reportDiagnosis: null,
+      comparison: {
+        matchType: 'no_report_diagnosis',
+        reasoning: 'Failed to parse AI response. Manual review required.',
+      },
+    };
   }
 }
 
@@ -204,25 +309,39 @@ export async function POST(req: NextRequest) {
     // Step 1: OCR if file provided
     if (file) {
       const buffer = Buffer.from(await file.arrayBuffer());
-      reportText = await runOCR(buffer);
+      
+      // If it's a text file, read directly instead of OCR
+      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        reportText = buffer.toString('utf-8');
+      } else {
+        reportText = await runOCR(buffer, file.type);
+      }
     } else if (rawSymptoms) {
       reportText = rawSymptoms;
     } else {
       return NextResponse.json({ error: "Provide a file or symptoms text." }, { status: 400 });
     }
 
-    // Step 2: Extract symptoms with Gemini
+    // Step 2: Extract symptoms via Gemini (first call)
     const symptoms = await extractSymptoms(reportText);
 
-    // Step 3: Embed
+    // Step 3: Embed symptoms
     const queryVec = await embedSymptoms(symptoms);
 
-    // Step 4: Match
+    // Step 4: Match diseases
     const matches = rankDiseases(queryVec);
+    const aiDiagnosis = matches[0]?.name || "Unknown";
+
+    // Step 5: Extract report diagnosis and compare (second call - combined)
+    const { reportDiagnosis, comparison } = await extractAndCompare(reportText, aiDiagnosis, symptoms);
 
     return NextResponse.json({
       symptoms_extracted: symptoms,
       report_text_preview: reportText.slice(0, 300),
+      report_diagnosis: reportDiagnosis,
+      ai_diagnosis: aiDiagnosis,
+      diagnosis_match_type: comparison.matchType,
+      reasoning: comparison.reasoning,
       matches,
     });
   } catch (err: unknown) {

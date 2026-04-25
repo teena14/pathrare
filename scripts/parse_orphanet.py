@@ -156,7 +156,7 @@ def main():
     print("=" * 40)
 
     # 1. HPO disease-symptom mappings
-    hpo_files = find_xml("*HPO*") or find_xml("*product4*") or find_xml("*hpo*")
+    hpo_files = find_xml("*HPO*") or find_xml("*product4*") or find_xml("*hpo*") or find_xml("*phenotype*")
     all_diseases = []
     for f in hpo_files:
         all_diseases.extend(parse_hpo(f))

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, Sparkles, AlertCircle, ChevronRight, X, Microscope } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface DiseaseMatch {
@@ -17,6 +19,10 @@ interface DiseaseMatch {
 interface DiagnoseResult {
   symptoms_extracted: string[];
   report_text_preview: string;
+  report_diagnosis: string | null;
+  ai_diagnosis: string;
+  diagnosis_match_type: 'matches' | 'differs' | 'no_report_diagnosis';
+  reasoning: string;
   matches: DiseaseMatch[];
 }
 
@@ -31,6 +37,8 @@ function confidenceColor(confidence: number) {
 const ACCEPTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 
 export default function DiagnosePage() {
+  const { profile } = useAuth();
+  const router = useRouter();
   const [mode, setMode] = useState<'upload' | 'text'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [symptoms, setSymptoms] = useState('');
@@ -229,6 +237,59 @@ export default function DiagnosePage() {
         {result && (
           <motion.div key="results" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
+            {/* Diagnosis Comparison Card */}
+            <div className={`rounded-3xl border p-6 ${
+              result.diagnosis_match_type === 'matches' 
+                ? 'bg-emerald-50 border-emerald-200' 
+                : result.diagnosis_match_type === 'differs'
+                ? 'bg-amber-50 border-amber-200'
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              <div className="flex items-center gap-3 mb-4">
+                {result.diagnosis_match_type === 'matches' && (
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <span className="text-emerald-600 text-lg">✓</span>
+                  </div>
+                )}
+                {result.diagnosis_match_type === 'differs' && (
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                    <span className="text-amber-600 text-lg">⚠</span>
+                  </div>
+                )}
+                {result.diagnosis_match_type === 'no_report_diagnosis' && (
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-blue-600 text-lg">ℹ</span>
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-lg font-bold text-dark-slate">
+                    {result.diagnosis_match_type === 'matches' && 'Diagnosis Confirmed'}
+                    {result.diagnosis_match_type === 'differs' && 'Diagnosis Differs'}
+                    {result.diagnosis_match_type === 'no_report_diagnosis' && 'No Diagnosis in Report'}
+                  </h2>
+                  <p className="text-sm text-light-slate mt-0.5">AI analysis comparison</p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                {result.report_diagnosis && (
+                  <div className="bg-white/60 rounded-2xl p-4">
+                    <p className="text-xs font-bold text-light-slate mb-1">Report Diagnosis</p>
+                    <p className="font-bold text-dark-slate">{result.report_diagnosis}</p>
+                  </div>
+                )}
+                <div className="bg-white/60 rounded-2xl p-4">
+                  <p className="text-xs font-bold text-light-slate mb-1">AI Diagnosis</p>
+                  <p className="font-bold text-dark-slate">{result.ai_diagnosis}</p>
+                </div>
+              </div>
+
+              <div className="bg-white/60 rounded-2xl p-4">
+                <p className="text-xs font-bold text-light-slate mb-1">Reasoning</p>
+                <p className="text-sm text-dark-slate leading-relaxed">{result.reasoning}</p>
+              </div>
+            </div>
+
             {/* Symptoms extracted */}
             <div className="bg-white rounded-3xl border border-surface-200 p-6">
               <h2 className="text-base font-bold text-dark-slate mb-4 flex items-center gap-2">
@@ -291,8 +352,42 @@ export default function DiagnosePage() {
                 ← Run Another
               </button>
               <button
+                onClick={async () => {
+                  if (!profile?.uid) {
+                    alert('Please log in to save reports');
+                    return;
+                  }
+                  
+                  try {
+                    const res = await fetch('/api/reports', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        patientId: profile.uid,
+                        fileName: file?.name || 'Symptom Input',
+                        fileType: file?.type || 'text',
+                        reportText: result.report_text_preview,
+                        symptoms: result.symptoms_extracted,
+                        aiDiagnosis: result.matches[0],
+                        allMatches: result.matches,
+                        reportDiagnosis: result.report_diagnosis,
+                        diagnosisMatchType: result.diagnosis_match_type,
+                        reasoning: result.reasoning,
+                      }),
+                    });
+                    
+                    if (res.ok) {
+                      router.push('/patient/clinical-profile');
+                    } else {
+                      const data = await res.json();
+                      alert('Failed to save: ' + data.error);
+                    }
+                  } catch (err) {
+                    alert('Failed to save report');
+                  }
+                }}
                 className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary-blue text-white font-bold hover:bg-blue-700 shadow-[0_4px_14px_rgba(15,93,227,0.3)] transition-all">
-                Generate Living Brief <ChevronRight className="w-4 h-4" />
+                Save to Clinical Profile <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </motion.div>
