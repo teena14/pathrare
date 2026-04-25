@@ -127,7 +127,7 @@ export default function MedicalAssistantPage() {
             ? {
                 ...m,
                 content: data.error
-                  ? `⚠️ ${data.error}`
+                  ? `[Error] ${data.error}`
                   : data.answer,
                 sources: data.sources ?? [],
                 loading: false,
@@ -141,7 +141,7 @@ export default function MedicalAssistantPage() {
           m.id === loadingMsg.id
             ? {
                 ...m,
-                content: "⚠️ Failed to connect to the knowledge base. Please try again.",
+                content: "[Error] Failed to connect to the knowledge base. Please try again.",
                 loading: false,
               }
             : m

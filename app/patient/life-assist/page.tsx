@@ -3,15 +3,15 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ChevronRight, MessageSquareText } from 'lucide-react';
+import { ChevronRight, MessageSquareText, Landmark, GraduationCap, Stethoscope, Cpu } from 'lucide-react';
 import { canOpenTaskChat, dedupeSupportTasks, humanizeTaskStatus, mapSupportTask, SupportTask } from '@/lib/task-chat';
 
 const CATEGORIES = [
-  { id: 'financial', label: 'Financial & Legal Aid', emoji: '💰', desc: 'Schemes, disability certificates, legal rights' },
-  { id: 'education', label: 'Adaptive Education', emoji: '📚', desc: 'IEPs, home schooling, special educator access' },
-  { id: 'medical', label: 'Medical & Care', emoji: '🏥', desc: 'Specialist connects, second opinions, medicine aid' },
-  { id: 'assistive', label: 'Assistive Technology', emoji: '🦾', desc: 'Devices, mobility aids, adaptive tools' },
-] as const;
+  { id: 'financial', label: 'Financial & Legal Aid', icon: Landmark, desc: 'Schemes, disability certificates, legal rights' },
+  { id: 'education', label: 'Adaptive Education', icon: GraduationCap, desc: 'IEPs, home schooling, special educator access' },
+  { id: 'medical', label: 'Medical & Care', icon: Stethoscope, desc: 'Specialist connects, second opinions, medicine aid' },
+  { id: 'assistive', label: 'Assistive Technology', icon: Cpu, desc: 'Devices, mobility aids, adaptive tools' },
+];
 
 export default function LifeAssistLandingPage() {
   const [supportTasks, setSupportTasks] = useState<SupportTask[]>([]);
@@ -79,11 +79,15 @@ export default function LifeAssistLandingPage() {
           >
             <Link
               href={`/patient/life-assist/${item.id}`}
-              className="block rounded-3xl border-2 border-surface-200 bg-white p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-primary-blue/40 hover:shadow-xl"
+              className="flex items-start gap-5 rounded-3xl border-2 border-surface-200 bg-white p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-primary-blue/40 hover:shadow-xl"
             >
-              <div className="text-4xl mb-4">{item.emoji}</div>
-              <h2 className="text-lg font-bold text-dark-slate mb-1">{item.label}</h2>
-              <p className="text-xs font-medium text-light-slate">{item.desc}</p>
+              <div className="shrink-0 p-3 bg-primary-blue/5 rounded-2xl border border-primary-blue/10">
+                <item.icon className="w-8 h-8 text-primary-blue" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-dark-slate mb-1">{item.label}</h2>
+                <p className="text-sm font-medium text-light-slate leading-relaxed">{item.desc}</p>
+              </div>
             </Link>
           </motion.div>
         ))}

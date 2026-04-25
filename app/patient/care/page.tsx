@@ -79,8 +79,8 @@ export default function CarePage() {
   useEffect(() => {
     const disease = patientDisease;
     const welcomeText = disease
-      ? `Hello! I'm your Care Assistant, personalised for **${disease}**.\n\nI'll answer all your questions with your condition in mind. I reference:\n🔬 **Orphanet & OMIM** — rare disease-specific clinical data\n🏥 **WHO & NIH** — international clinical guidelines\n🩺 **CDC** — disease prevention and care protocols\n🚑 **Red Cross** — first aid & emergency procedures\n🇮🇳 **India NHM, PM-JAY, RPWD Act** — government schemes & disability welfare\n\nFor anything not in my local database, I draw on my full medical training — so you'll always get a complete answer. I may ask follow-up questions to personalise my advice to you.\n\nWhat would you like to know today?`
-      : `Hello! I'm your Care & Medical Knowledge Assistant.\n\nI'll give you thorough, evidence-based answers by referencing:\n🔬 **Orphanet & OMIM** — rare disease databases\n🏥 **WHO & NIH** — international clinical guidelines\n🩺 **CDC** — disease prevention & care protocols\n🚑 **Red Cross** — first aid & emergency procedures\n🇮🇳 **India NHM, PM-JAY, RPWD Act** — government health schemes\n\nWhen my local database doesn't cover a topic, I use my full medical training to give you a complete answer — I'll never leave you without information. I may ask follow-up questions to give you more personalised advice.\n\nWhat would you like to know?`;
+      ? `Hello! I'm your Care Assistant, personalised for **${disease}**.\n\nI'll answer all your questions with your condition in mind. I reference:\n• **Orphanet & OMIM** — rare disease-specific clinical data\n• **WHO & NIH** — international clinical guidelines\n• **CDC** — disease prevention and care protocols\n• **Red Cross** — first aid & emergency procedures\n• **India NHM, PM-JAY, RPWD Act** — government schemes & disability welfare\n\nFor anything not in my local database, I draw on my full medical training — so you'll always get a complete answer. I may ask follow-up questions to personalise my advice to you.\n\nWhat would you like to know today?`
+      : `Hello! I'm your Care & Medical Knowledge Assistant.\n\nI'll give you thorough, evidence-based answers by referencing:\n• **Orphanet & OMIM** — rare disease databases\n• **WHO & NIH** — international clinical guidelines\n• **CDC** — disease prevention & care protocols\n• **Red Cross** — first aid & emergency procedures\n• **India NHM, PM-JAY, RPWD Act** — government health schemes\n\nWhen my local database doesn't cover a topic, I use my full medical training to give you a complete answer — I'll never leave you without information. I may ask follow-up questions to give you more personalised advice.\n\nWhat would you like to know?`;
 
     setMessages([
       {
@@ -152,7 +152,7 @@ export default function CarePage() {
           m.id === loadingId
             ? {
                 ...m,
-                content: data.error ? `⚠️ ${data.error}` : data.answer,
+                content: data.error ? `[Error] ${data.error}` : data.answer,
                 sources: data.sources ?? [],
                 loading: false,
                 needsFollowUp: data.needsFollowUp ?? false,
@@ -164,7 +164,7 @@ export default function CarePage() {
       setMessages((prev) =>
         prev.map((m) =>
           m.id === loadingId
-            ? { ...m, content: "⚠️ Connection failed. Please try again.", loading: false }
+            ? { ...m, content: "[Error] Connection failed. Please try again.", loading: false }
             : m
         )
       );
