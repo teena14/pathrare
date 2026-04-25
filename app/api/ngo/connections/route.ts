@@ -29,7 +29,7 @@ function serializeValue(value: unknown): unknown {
   );
 }
 
-function serializeDoc(doc: FirebaseFirestore.DocumentSnapshot | FirebaseFirestore.QueryDocumentSnapshot) {
+function serializeDoc(doc: FirebaseFirestore.DocumentSnapshot | FirebaseFirestore.QueryDocumentSnapshot): { id: string } & FirestoreRecord {
   return {
     id: doc.id,
     ...(serializeValue(doc.data() ?? {}) as FirestoreRecord),
