@@ -1,0 +1,582 @@
+================================================================================
+PATHRARE — COMPLETE SYSTEM OVERVIEW
+Last Updated: April 2026
+================================================================================
+
+
+1. WHAT IS PATHRARE?
+────────────────────
+PathRare is a multi-role rare disease support platform. It connects patients
+with rare diseases to NGOs, volunteers, coordinators, and medical institutions
+through a single web application.
+
+Core problems it solves:
+  - Diagnostic uncertainty: patients with rare diseases wait years for a diagnosis
+  - Resource discovery: hard to find NGOs and support groups
+  - Care coordination: fragmented day-to-day support and task management
+
+Roles supported:
+  - Patient / Caregiver
+  - NGO (Non-Governmental Organisation)
+  - Volunteer
+  - Doctor
+  - Care Coordinator
+  - Hospital
+
+
+================================================================================
+2. TECH STACK
+================================================================================
+
+FRAMEWORK
+  - Next.js 16.2.4       — Full-stack React framework (App Router)
+  - React 19.2.4         — UI library
+  - TypeScript 5         — Type-safe JavaScript
+
+STYLING
+  - TailwindCSS v4       — Utility-first CSS (via @tailwindcss/postcss)
+  - Framer Motion 12     — Page transitions and micro-animations
+  - Custom design tokens — Defined in globals.css (primary-blue, dark-slate,
+                           surface-*, light-slate colour system)
+
+MAPS & GEO
+  - Leaflet 1.9          — Interactive maps
+  - React-Leaflet 5      — React wrapper for Leaflet
+  - Used in: NGO resource finder, coordinator allocation pages
+
+ICONS
+  - Lucide React 1.8     — Icon library throughout all UI
+
+AUTHENTICATION
+  - Firebase Auth 12     — Email/password sign-in, session management
+  - Firebase Firestore   — User profile storage, role assignment
+
+SERVER / BACKEND
+  - Next.js API Routes   — All backend logic lives in /app/api/
+  - Node.js (via Next)   — Server-side runtime
+
+AI SERVICES
+  - Google Gemini API    — Symptom extraction from text, disease matching,
+                           Living Brief generation, diagnosis comparison
+  - Google Cloud Vision  — OCR on uploaded medical images (PNG, JPG, WebP)
+  - Vertex AI            — text-embedding-004 for disease symptom embeddings
+                           (used in embedding-based pipeline variant)
+  - pdf-parse            — Extract text from uploaded PDF reports
+
+GCP AUTH
+  - google-auth-library  — Service account auth for Vision + Vertex AI
+
+
+================================================================================
+3. PROJECT FILE STRUCTURE
+================================================================================
+
+pathrare/
+├── app/
+│   ├── api/
+│   │   ├── diagnose/          POST /api/diagnose
+│   │   ├── living-brief/      POST /api/living-brief
+│   │   ├── auth/              Auth helpers
+│   │   ├── life-assist/       Life Assist task engine
+│   │   ├── tasks/             Task CRUD
+│   │   ├── ngo/               NGO operations
+│   │   ├── allocate/          Care coordinator allocation
+│   │   └── resources/         Resource directory
+│   │
+│   ├── auth/                  Login / register page
+│   ├── patient/
+│   │   ├── page.tsx           Patient dashboard
+│   │   ├── layout.tsx         Patient nav shell
+│   │   ├── diagnose/          Diagnostic Inference UI
+│   │   ├── life-assist/       Life Assist engine UI
+│   │   ├── care/              Care coordination
+│   │   ├── community/         Community tab
+│   │   └── clinical-profile/  Saved reports & history
+│   │
+│   ├── doctor/                Doctor dashboard
+│   ├── coordinator/           Care coordinator dashboard
+│   ├── hospital/              Hospital dashboard
+│   ├── ngo/                   NGO dashboard
+│   ├── volunteer/             Volunteer dashboard
+│   ├── layout.tsx             Root layout
+│   ├── page.tsx               Landing / role selector
+│   └── globals.css            Global design tokens
+│
+├── lib/
+│   ├── firebase.ts            Firebase client initialisation
+│   ├── firebase-admin.ts      Firebase Admin SDK (server-side)
+│   ├── auth-context.tsx       React Auth context + useAuth hook
+│   ├── ngo-associations.ts    NGO ↔ disease association data
+│   ├── ngo-support.ts         NGO support workflow helpers
+│   ├── support-workflow.ts    Multi-step care workflow logic
+│   ├── task-chat.ts           Task-level messaging helpers
+│   └── use-task-presence.ts   Real-time task presence hook
+│
+├── data/
+│   ├── orphanet/
+│   │   ├── xml/               Raw Orphanet XML exports
+│   │   └── parsed/
+│   │       ├── alignments.json    ORPHA code → ICD-11 + OMIM mappings (~105k entries)
+│   │       ├── classifications.json  Disease taxonomy + types
+│   │       ├── diseases.json      (placeholder, not yet populated)
+│   │       └── index.json         Pre-built embedding vectors (generated by scripts)
+│   └── hpo/
+│       ├── hp.obo             HPO ontology — 19,944 phenotype term definitions,
+│       │                      names, synonyms, definitions
+│       └── phenotype.hpoa     Disease ↔ HPO annotations — 282,728 rows
+│                              (114,943 ORPHA phenotypic entries, aspect=P)
+│
+├── scripts/
+│   ├── parse_orphanet.py      Parses XML → alignments.json + classifications.json
+│   ├── embed_symptoms.py      Generates Vertex AI embeddings for each disease
+│   └── build_index.py         Builds the cosine-similarity search index.json
+│
+├── credentials/
+│   └── gcp-service-account.json   GCP service account key (gitignored)
+│
+├── .env.local                 Environment variables (see Section 6)
+└── package.json
+
+
+================================================================================
+4. DATA SOURCES — WHAT EACH IS USED FOR
+================================================================================
+
+── ORPHANET DATA ──────────────────────────────────────────────────────────────
+
+Source: Orphanet (www.orpha.net) — global reference database for rare diseases
+
+  alignments.json (1.9 MB, ~105,000 entries)
+    Purpose: Map every Orphanet ORPHA code to its ICD-11 and OMIM codes
+    Used in: /api/diagnose — enriching disease matches with clinical codes
+             /api/living-brief — including codes in the Living Brief
+    Structure: [{ orpha_code, name, icd_codes: [], omim: [] }]
+
+  classifications.json (5 MB, ~199,000 entries)
+    Purpose: Full Orphanet disease taxonomy with types
+             (Disease, Clinical group, Category, Malformation syndrome, etc.)
+    Used in: /api/diagnose — supplementing missing disease names
+    Structure: [{ orpha_code, name, type }]
+
+  index.json (generated, not committed)
+    Purpose: Pre-computed Vertex AI embedding vectors for each disease
+    Generated by: scripts/embed_symptoms.py → scripts/build_index.py
+    Used in: /api/diagnose (embedding-based pipeline)
+
+── HPO DATA ───────────────────────────────────────────────────────────────────
+
+Source: Human Phenotype Ontology (hpo.jax.org) — version 2026-02-16
+
+  hp.obo (10.7 MB)
+    What: Ontology of 19,944 standardised clinical phenotype terms
+    Contains: HP codes, term names, synonyms, definitions, relationships
+    Used in:
+      - Building hpoTextLookup (lowercase term name → HP code)
+        so patient text can be scanned for HPO terms without calling Gemini
+      - Translating HP codes back to human-readable names in results
+      - Populating synonym variants for text matching
+
+  phenotype.hpoa (35 MB, 282,728 rows)
+    What: Evidence-based disease ↔ HPO phenotype annotation database
+    Sources: 4,337 Orphanet diseases + 8,614 OMIM diseases + 47 DECIPHER
+    Columns: database_id | disease_name | qualifier | hpo_id | reference |
+             evidence | onset | frequency | sex | modifier | aspect | biocuration
+    Filtered to: aspect="P" (phenotypic abnormality) + qualifier≠"NOT"
+    Used in:
+      - diseaseHPO map: disease_id → Set<HPO codes>
+        e.g. "ORPHA:140944" → {HP:0002650, HP:0010816, HP:0025104, ...}
+      - hpoToDisease map: HPO code → Set<disease IDs>
+        e.g. "HP:0002650" → {"ORPHA:140944", "ORPHA:14328", ...}
+      - Jaccard similarity scoring for evidence-based disease ranking
+
+
+================================================================================
+5. DIAGNOSTIC PIPELINE — DETAILED FLOW
+================================================================================
+
+Two pipeline variants exist:
+
+── VARIANT A: Gemini + HPO Database (current advanced version) ─────────────────
+
+  INPUT: File upload (PDF/image) OR typed symptom text
+
+  Step 1 — OCR (if file)
+    Tool: Google Cloud Vision API (DOCUMENT_TEXT_DETECTION)
+    Auth: GCP service account → access token via google-auth-library
+    Input: Base64-encoded image bytes
+    Output: Plain text transcript of the medical report
+
+  Step 2 — HPO Text Pre-matching (no AI cost)
+    Tool: In-memory hpoTextLookup (built from hp.obo at startup)
+    Logic: Scan patient text for known HPO term names/synonyms (≥8 chars)
+    Output: Set of HP codes found in text
+    Example: "scoliosis" → HP:0002650, "port-wine stain" → HP:0025104
+
+  Step 3 — HPO Disease Scoring (Jaccard similarity)
+    Input: HP codes from Step 2
+    Logic: For each HP code, look up matching diseases in hpoToDisease map
+           Score = intersection / union (Jaccard similarity)
+    Output: Top 20 ORPHA diseases ranked by phenotype overlap
+    Example: CLOVES syndrome (ORPHA:140944) — 3 matching HPO terms
+
+  Step 4 — Gemini API Call (single call)
+    Model: gemini-2.0-flash (auto-discovered via /v1/models endpoint)
+           Falls back through all available models on rate limit (429)
+    Prompt includes:
+      - Patient text (max 2000 chars)
+      - HPO pre-matched diseases (flagged as "[HPO PRE-MATCHED]")
+      - 200 general Orphanet diseases
+    Gemini returns:
+      - symptoms: [{term, hpo_code}] — each symptom with HP code
+      - matches: top 5 diseases with confidence 0-100 + reasoning
+    Note: Compact single-line JSON format to prevent truncation
+          JSON repair function handles any remaining truncation
+
+  Step 5 — Post-call HPO Scoring (merge pre + Gemini HP codes)
+    Merge preHPOCodes + Gemini's extracted HP codes (deduplicated)
+    Re-run Jaccard scoring with combined set for richer coverage
+
+  Step 6 — Merge LLM + HPO Results
+    For diseases in BOTH lists:
+      combined_score = 0.55 × gemini_confidence + 0.45 × hpo_jaccard
+    For Gemini-only diseases:
+      combined_score = 0.55 × gemini_confidence
+    For HPO-only diseases:
+      combined_score = 0.45 × precision (matched_hpo / total_patient_hpo)
+    Sort by combined_score, return top 5
+
+  Step 7 — Enrich with Codes
+    Look up each match in alignments.json → add icd_codes + omim
+
+  OUTPUT JSON:
+    {
+      symptoms_extracted: string[],
+      symptoms_with_hpo: [{term, hpo_code}],
+      hpo_codes_used: string[],
+      matches: [{
+        orpha_code, name, confidence, gemini_confidence,
+        hpo_score, combined_score, reasoning,
+        icd_codes, omim, matched_hpo: [{code, name}]
+      }]
+    }
+
+── VARIANT B: Gemini + Vertex AI Embeddings (original design) ──────────────────
+
+  Step 1 — OCR (same as Variant A)
+  Step 2 — Gemini: extract symptom list from text
+  Step 3 — Vertex AI text-embedding-004: embed joined symptom string
+  Step 4 — Cosine similarity against pre-built index.json
+  Step 5 — Gemini: compare report diagnosis vs AI diagnosis
+  Note: Requires pre-built index.json (generated by scripts/) and
+        index.json is not committed to the repo.
+        Also compares report_diagnosis vs ai_diagnosis with match type:
+        "matches" | "differs" | "no_report_diagnosis"
+
+
+================================================================================
+6. LIVING BRIEF — /api/living-brief
+================================================================================
+
+  What: Generates a personalised clinical summary document for the patient
+  Input: symptoms[], matches[] (top disease results)
+  Process: Single Gemini call → structured markdown document
+  Output:
+    {
+      brief: string (markdown),
+      generatedAt: ISO timestamp,
+      basedOn: { symptoms, topMatch: { name, orpha_code } }
+    }
+
+  Features of the generated brief:
+    - Patient-readable explanation of the top diagnosis
+    - Summary of matched symptoms
+    - ICD and OMIM reference codes
+    - Suggested next steps / questions for the doctor
+    - Disclaimer that it is AI-generated and not a clinical opinion
+
+  Model fallback: Same multi-model discovery as /api/diagnose
+  (Fetches available Gemini models dynamically, tries each on 429 rate limit)
+
+
+================================================================================
+7. AUTHENTICATION & USER ROLES
+================================================================================
+
+  Auth Provider: Firebase Authentication (email + password)
+  Profile Storage: Firestore — collection: "users"
+  Profile fields: { uid, email, role, displayName, createdAt }
+
+  Roles and their dashboards:
+    patient      → /patient         (diagnose, life-assist, care, community,
+                                     clinical-profile)
+    ngo          → /ngo             (resource management, volunteer coordination)
+    volunteer    → /volunteer       (task queue, availability)
+    doctor       → /doctor          (patient reports, clinical review)
+    coordinator  → /coordinator     (care allocation, case tracking)
+    hospital     → /hospital        (patient roster, case escalation)
+
+  Auth flow:
+    1. Landing page (/) — role selection cards
+    2. After selecting role → login/signup form appears
+    3. On sign-in → profile fetched from Firestore → redirected to role dashboard
+    4. useAuth() hook (lib/auth-context.tsx) provides auth state everywhere
+
+
+================================================================================
+8. PATIENT PORTAL — FEATURE PAGES
+================================================================================
+
+  /patient                   Patient dashboard with navigation tiles
+
+  /patient/diagnose          Diagnostic Inference
+    - Upload PDF/image OR type symptoms
+    - Runs full AI diagnostic pipeline
+    - Shows: extracted symptoms, HPO matched phenotypes, disease matches
+             with confidence bars, ICD/OMIM codes, reasoning
+    - "Generate Living Brief" → /api/living-brief
+    - "Save to Clinical Profile" → /api/reports → /patient/clinical-profile
+
+  /patient/life-assist       AI Life Assist Engine
+    - Generates personalised daily task lists for rare disease patients
+    - Tasks: medical, social, financial, emotional support items
+    - Sourced from: /api/life-assist + lib/support-workflow.ts
+
+  /patient/care              Care Coordination
+    - View assigned care coordinator
+    - Track care tasks and appointments
+
+  /patient/community         Community
+    - Connect with others with same or related diagnoses
+    - NGO discovery
+
+  /patient/clinical-profile  Clinical Profile
+    - View saved diagnostic reports
+    - History of Living Briefs
+    - Linked NGOs
+
+
+================================================================================
+9. API ROUTES SUMMARY
+================================================================================
+
+  POST /api/diagnose
+    Input:  FormData { file?: File, symptoms?: string }
+    Output: Symptoms, HPO codes, top 5 disease matches with combined scores
+
+  POST /api/living-brief
+    Input:  JSON { symptoms: string[], matches: DiseaseMatch[] }
+    Output: Markdown Living Brief + metadata
+
+  POST /api/auth/[...nextauth]
+    Firebase auth verification helpers
+
+  POST /api/tasks
+    CRUD for care tasks (Firestore backed)
+
+  POST /api/allocate
+    Care coordinator allocation logic
+
+  GET  /api/ngo
+    NGO directory queries
+
+  GET  /api/resources
+    Resource directory for patients
+
+
+================================================================================
+10. KEY LIBRARY FILES
+================================================================================
+
+  lib/firebase.ts
+    Client-side Firebase initialisation (Auth + Firestore)
+    Used by: all client components via useAuth()
+
+  lib/firebase-admin.ts
+    Server-side Firebase Admin SDK
+    Used by: API routes that write to Firestore
+
+  lib/auth-context.tsx
+    React context providing: user, profile, loading, signIn, signOut
+    useAuth() hook — used in every page component
+
+  lib/support-workflow.ts (13.9 KB)
+    Multi-step care workflow logic — task generation, priority scoring,
+    care plan templating
+
+  lib/ngo-support.ts (6.6 KB)
+    NGO ↔ patient matching, association lookup, support type categorisation
+
+  lib/ngo-associations.ts
+    Static mapping of NGOs to disease categories
+
+  lib/task-chat.ts
+    Real-time task-level messaging (Firestore listeners)
+
+  lib/use-task-presence.ts
+    Hook: tracks which coordinator is currently viewing a task
+
+
+================================================================================
+11. DATA FLOW DIAGRAM
+================================================================================
+
+  PATIENT INPUT
+       │
+       ▼
+  /api/diagnose (POST)
+       │
+       ├─[if file]──► Google Cloud Vision API ──► extracted text
+       │
+       ├─────────────► hpoTextLookup scan ──────► pre-matched HP codes
+       │
+       ├─────────────► HPO Jaccard scoring ──────► candidate diseases (top 20)
+       │
+       ├─────────────► Gemini API ───────────────► symptoms + HP codes + LLM matches
+       │                    │
+       │               (uses HPO candidates in prompt for better ranking)
+       │
+       ├─────────────► Merge HP codes (pre + Gemini) ──► re-score
+       │
+       ├─────────────► mergeMatches() ──────────► combined_score ranking
+       │                 55% Gemini + 45% HPO evidence
+       │
+       ├─────────────► Enrich from alignments.json ──► ICD + OMIM codes
+       │
+       └─────────────► JSON response to frontend
+
+
+  FRONTEND (page.tsx)
+       │
+       ├─ Display: symptom tags
+       ├─ Display: disease cards (confidence bar, HPO badges, ICD/OMIM)
+       └─ "Generate Living Brief" → /api/living-brief → markdown display
+
+
+================================================================================
+12. ENVIRONMENT VARIABLES (.env.local)
+================================================================================
+
+  GEMINI_API_KEY
+    Provider: Google AI Studio (aistudio.google.com/api-keys)
+    Used for: All Gemini API calls (diagnose + living-brief)
+    Note: Free tier = 15 RPM per model. Multi-model fallback handles 429s.
+
+  GOOGLE_APPLICATION_CREDENTIALS
+    Value: Path to credentials/gcp-service-account.json
+    Used for: Google Cloud Vision (OCR) + Vertex AI (embeddings)
+    Scopes needed: cloud-platform, cloud-vision
+
+  GCP_PROJECT_ID
+    Value: Your Google Cloud project ID (e.g. rarity-f316d)
+    Used for: Vertex AI embedding endpoint URL
+
+  GCP_LOCATION
+    Value: us-central1 (default)
+    Used for: Vertex AI regional endpoint
+
+  NEXT_PUBLIC_FIREBASE_API_KEY
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+  NEXT_PUBLIC_FIREBASE_APP_ID
+    Provider: Firebase Console → Project Settings → Your apps
+    Used for: Client-side Firebase Auth + Firestore
+
+  FIREBASE_PROJECT_ID
+  FIREBASE_CLIENT_EMAIL
+  FIREBASE_PRIVATE_KEY
+    Provider: Firebase Console → Service Accounts
+    Used for: Server-side Firebase Admin SDK (API routes)
+
+
+================================================================================
+13. PYTHON SCRIPTS (data preparation)
+================================================================================
+
+  scripts/parse_orphanet.py
+    What: Parses raw Orphanet XML files → JSON
+    Input: data/orphanet/xml/*.xml
+    Output: data/orphanet/parsed/alignments.json
+             data/orphanet/parsed/classifications.json
+    Run once when updating Orphanet data
+
+  scripts/embed_symptoms.py
+    What: For each disease, generates a Vertex AI text embedding
+    Input: alignments.json + classifications.json
+    Output: embeddings saved per disease
+    Requires: GCP service account with Vertex AI access
+
+  scripts/build_index.py
+    What: Assembles all embeddings into a single searchable index
+    Input: Per-disease embeddings
+    Output: data/orphanet/parsed/index.json
+    Format: [{ orpha_code, name, embedding: number[] }]
+    Used by: Variant B pipeline (cosine similarity matching)
+
+
+================================================================================
+14. KEY DESIGN DECISIONS
+================================================================================
+
+  Why Next.js App Router?
+    Server components + API routes in one codebase. No separate backend.
+    API routes handle all GCP/AI calls server-side (API keys never exposed).
+
+  Why not use Orphanet's own text descriptions?
+    Orphanet XML exports do not include symptom descriptions in the parsed
+    format we use. The alignments.json contains only codes and names.
+    Clinical knowledge comes entirely from Gemini's training data + HPO.
+
+  Why Gemini over OpenAI?
+    Free tier availability, Google ecosystem alignment (same account as
+    Vision + Vertex), and strong medical knowledge in Gemini 1.5/2.0.
+
+  Why HPO + Gemini instead of pure LLM?
+    Pure LLM matching is inconsistent — Gemini may not know rare diseases.
+    HPO database provides evidence-based phenotype matching grounded in
+    peer-reviewed clinical data (114,943 curated ORPHA-HPO associations).
+    Combined scoring (55% LLM + 45% HPO) outperforms either alone.
+
+  Why Jaccard similarity for HPO scoring?
+    Jaccard = |intersection| / |union|
+    Penalises diseases that have many HPO terms the patient doesn't have.
+    More precise than raw overlap count.
+
+  Why module-level caching for HPO data?
+    phenotype.hpoa is 35 MB (282K rows). Parsing takes ~5s on first request.
+    Module-level Maps persist across requests in the Next.js server process.
+    After first request: lookup is O(1), no file I/O.
+
+  Gemini model fallback strategy:
+    /v1/models endpoint is polled once at startup to discover all available
+    models that support generateContent. On 429 (rate limit), the next model
+    in the list is tried automatically. Eliminates hardcoded model names
+    and adapts to Google's model availability changes.
+
+
+================================================================================
+15. KNOWN LIMITATIONS & FUTURE WORK
+================================================================================
+
+  CURRENT LIMITATIONS:
+    - index.json not yet generated (Variant B requires running scripts)
+    - Gemini free tier: 15 RPM — heavy testing can exhaust daily quota
+    - HPO text pre-matching uses simple substring match (can have false positives)
+    - Living Brief not saved to Firestore yet (only displayed)
+    - /api/reports endpoint referenced in UI but not yet implemented
+
+  PLANNED / FUTURE:
+    - MongoDB Atlas for storing patient diagnostic history
+    - Vertex AI Vector Search (replacing in-memory cosine similarity)
+    - FAISS/pgvector for production-scale embedding search
+    - OMIM API integration for richer disease descriptions
+    - FHIR-compatible export of Living Briefs
+    - Misdiagnosis alert system (compare new diagnosis vs old records)
+    - Multi-language support (HPO has translations in hp.obo)
+    - Coordinator mobile app (React Native)
+
+
+================================================================================
+END OF DOCUMENT
+================================================================================

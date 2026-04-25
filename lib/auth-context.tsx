@@ -21,6 +21,10 @@ interface UserProfile {
   associated_ngo_ids?: string[];
   availability?: string | number | null;
   orgName?: string | null;
+  primaryDisease?: string | null;      // Patient's self-reported disease
+  diagnosisStatus?: string | null;     // diagnosed | undiagnosed | suspected
+  firstName?: string | null;
+  lastName?: string | null;
 }
 
 type GoogleSignInResult =

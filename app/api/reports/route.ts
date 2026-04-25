@@ -1,11 +1,31 @@
-import { randomUUID } from 'crypto';
-import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+/**
+ * POST /api/reports
+ * Saves a diagnostic report to Firestore under the patient's uid.
+ *
+ * GET /api/reports?patientId=xxx
+ * Retrieves all reports for a patient (ordered by date desc).
+ */
 
-export const dynamic = 'force-dynamic';
+import { NextRequest, NextResponse } from "next/server";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 
-// ── POST: Create a new report with diagnosis ─────────────────────────────────
+// ── Firebase Admin init ────────────────────────────────────────────────────────
+function getAdminDb() {
+  if (!getApps().length) {
+    const projectId  = process.env.FIREBASE_ADMIN_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n");
+
+    if (!projectId || !clientEmail || !privateKey) {
+      throw new Error("Firebase Admin env vars not configured.");
+    }
+    initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
+  }
+  return getFirestore();
+}
+
+// ── POST — save a report ───────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -15,97 +35,84 @@ export async function POST(req: NextRequest) {
       fileType,
       reportText,
       symptoms,
+      symptoms_with_hpo,
+      hpo_codes_used,
       aiDiagnosis,
       allMatches,
-      reportDiagnosis,
+      statedDisease,
       diagnosisMatchType,
-      reasoning,
+      aiSummary,
+      mismatchReasoning,
     } = body;
 
-    if (!patientId || !fileName || !symptoms || !aiDiagnosis) {
-      return NextResponse.json(
-        { error: 'Missing required fields: patientId, fileName, symptoms, aiDiagnosis' },
-        { status: 400 }
-      );
+    if (!patientId) {
+      return NextResponse.json({ error: "patientId is required." }, { status: 400 });
     }
 
-    const reportId = randomUUID();
-    const now = new Date().toISOString();
+    const db = getAdminDb();
+    const reportRef = db.collection("reports").doc();
 
-    const reportData = {
-      reportId,
+    const report = {
+      id: reportRef.id,
       patientId,
-      fileName,
-      fileType: fileType || 'unknown',
-      uploadedAt: now,
-      reportText: reportText || '',
-      symptoms,
-      aiDiagnosis,
+      fileName: fileName || "Symptom Input",
+      fileType: fileType || "text",
+      reportText: reportText || "",
+      symptoms: symptoms || [],
+      symptoms_with_hpo: symptoms_with_hpo || [],
+      hpo_codes_used: hpo_codes_used || [],
+      aiDiagnosis: aiDiagnosis || null,
       allMatches: allMatches || [],
-      reportDiagnosis: reportDiagnosis || null,
-      diagnosisMatchType,
-      reasoning: reasoning || '',
-      isEdited: false,
+      statedDisease: statedDisease || null,
+      diagnosisMatchType: diagnosisMatchType || "no_stated_disease",
+      aiSummary: aiSummary || "",
+      mismatchReasoning: mismatchReasoning || "",
+      createdAt: new Date().toISOString(),
     };
 
-    await adminDb.collection('reports').doc(reportId).set(reportData);
+    await reportRef.set(report);
 
-    // Update patient profile report count
-    const patientProfileRef = adminDb.collection('patientProfile').doc(patientId);
-    const patientProfile = await patientProfileRef.get();
-    
-    if (patientProfile.exists) {
-      await patientProfileRef.update({
-        reportCount: FieldValue.increment(1),
-        lastReportAt: now,
-      });
-    } else {
-      await patientProfileRef.set({
-        patientId,
-        shareToken: randomUUID(),
-        shareEnabled: false,
-        shareCreatedAt: now,
-        reportCount: 1,
-        lastReportAt: now,
-      });
+    // Also update the patient's lastDiagnosis in their user doc
+    if (aiDiagnosis?.name) {
+      await db.collection("users").doc(patientId).set({
+        lastDiagnosis: aiDiagnosis.name,
+        lastDiagnosisDate: report.createdAt,
+        lastDiagnosisOrpha: aiDiagnosis.orpha_code || null,
+      }, { merge: true });
     }
 
-    return NextResponse.json(reportData, { status: 201 });
-  } catch (error) {
-    console.error('[POST /api/reports] Error:', error);
+    return NextResponse.json({ id: reportRef.id, success: true });
+  } catch (err: unknown) {
+    console.error("[/api/reports POST]", err);
     return NextResponse.json(
-      { error: 'Failed to create report' },
+      { error: err instanceof Error ? err.message : "Failed to save report." },
       { status: 500 }
     );
   }
 }
 
-// ── GET: Get all reports for a patient ───────────────────────────────────────
+// ── GET — retrieve reports ─────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const patientId = searchParams.get('patientId');
-
+    const patientId = req.nextUrl.searchParams.get("patientId");
     if (!patientId) {
-      return NextResponse.json(
-        { error: 'patientId is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "patientId query param required." }, { status: 400 });
     }
 
-    const snapshot = await adminDb
-      .collection('reports')
-      .where('patientId', '==', patientId)
-      .orderBy('uploadedAt', 'desc')
+    const db = getAdminDb();
+    const snap = await db
+      .collection("reports")
+      .where("patientId", "==", patientId)
+      .orderBy("createdAt", "desc")
+      .limit(20)
       .get();
 
-    const reports = snapshot.docs.map((doc) => doc.data());
-
+    const reports = snap.docs.map((d) => d.data());
     return NextResponse.json({ reports });
-  } catch (error) {
-    console.error('[GET /api/reports] Error:', error);
+  } catch (err: unknown) {
+    console.error("[/api/reports GET]", err);
     return NextResponse.json(
-      { error: 'Failed to fetch reports' },
+      { error: err instanceof Error ? err.message : "Failed to fetch reports." },
       { status: 500 }
     );
   }

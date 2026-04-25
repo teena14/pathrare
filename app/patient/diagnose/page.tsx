@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, Sparkles, AlertCircle, ChevronRight, X, Microscope } from 'lucide-react';
+import { Upload, FileText, Sparkles, AlertCircle, ChevronRight, X, Microscope, Download, BookOpen, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -11,18 +11,24 @@ interface DiseaseMatch {
   orpha_code: string;
   name: string;
   confidence: number;
-  score: number;
+  reasoning?: string;
   icd_codes: string[];
   omim: string[];
+  hpo_score?: number;
+  vector_score?: number;
+  gemini_confidence?: number;
+  matched_hpo?: { code: string; name: string }[];
 }
 
 interface DiagnoseResult {
   symptoms_extracted: string[];
+  symptoms_with_hpo?: { term: string; hpo_code: string }[];
+  hpo_codes_used?: string[];
   report_text_preview: string;
-  report_diagnosis: string | null;
-  ai_diagnosis: string;
-  diagnosis_match_type: 'matches' | 'differs' | 'no_report_diagnosis';
-  reasoning: string;
+  stated_disease: string | null;
+  ai_summary: string;
+  diagnosis_match_type: 'matches' | 'differs' | 'no_stated_disease';
+  mismatch_reasoning: string;
   matches: DiseaseMatch[];
 }
 
@@ -31,6 +37,72 @@ function confidenceColor(confidence: number) {
   if (confidence >= 75) return { bar: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
   if (confidence >= 50) return { bar: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
   return { bar: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
+}
+
+// ── Second Opinion Pack generator ─────────────────────────────────────────────
+function downloadSecondOpinionPack(result: DiagnoseResult, patientName: string) {
+  const top = result.matches[0];
+  const date = new Date().toLocaleDateString('en-IN', { dateStyle: 'long' });
+  const mismatchBg = result.diagnosis_match_type === 'matches' ? '#d1fae5' : result.diagnosis_match_type === 'differs' ? '#fef3c7' : '#eff6ff';
+  const mismatchColor = result.diagnosis_match_type === 'matches' ? '#065f46' : result.diagnosis_match_type === 'differs' ? '#92400e' : '#1e3a8a';
+  const mismatchLabel = result.diagnosis_match_type === 'matches' ? '✓ AI Confirms Stated Diagnosis' : result.diagnosis_match_type === 'differs' ? '⚠ Potential Misdiagnosis Detected' : 'ℹ No Prior Diagnosis on Record';
+
+  const matchRows = result.matches.map((m, i) => `
+    <tr style="background:${i % 2 === 0 ? '#f9fafb' : '#fff'}">
+      <td style="padding:10px 14px;font-weight:700">#${i+1} ${m.name}</td>
+      <td style="padding:10px 14px">ORPHA:${m.orpha_code}</td>
+      <td style="padding:10px 14px;text-align:center"><span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:20px;font-weight:700">${m.confidence}%</span></td>
+      <td style="padding:10px 14px;color:#6b7280;font-size:13px">${(m.icd_codes || []).join(', ') || '—'}</td>
+      <td style="padding:10px 14px;color:#6b7280;font-size:13px">${(m.omim || []).slice(0,2).join(', ') || '—'}</td>
+    </tr>`).join('');
+
+  const hpoRows = (result.symptoms_with_hpo || []).map(s => `
+    <tr><td style="padding:8px 14px">${s.term}</td>
+    <td style="padding:8px 14px"><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:12px">${s.hpo_code || '—'}</code></td></tr>`).join('');
+
+  const topHPO = (top?.matched_hpo || []).slice(0, 10).map(h =>
+    `<li style="margin:4px 0">${h.name} <code style="background:#f3f4f6;padding:1px 5px;border-radius:3px;font-size:12px">${h.code}</code></li>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>PathRare Second Opinion — ${date}</title>
+<style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111827;margin:0;padding:0;background:#f9fafb}
+.page{max-width:860px;margin:0 auto;padding:40px 32px;background:#fff}
+ h1{font-size:28px;font-weight:900;color:#0f5de3;margin:0}h2{font-size:18px;font-weight:800;margin:28px 0 12px;color:#111827;border-bottom:2px solid #e5e7eb;padding-bottom:6px}
+h3{font-size:15px;font-weight:700;margin:16px 0 8px;color:#374151}table{width:100%;border-collapse:collapse;font-size:14px}th{background:#0f5de3;color:#fff;padding:10px 14px;text-align:left;font-size:13px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-weight:700;font-size:12px}.disclaimer{margin-top:32px;padding:14px;background:#fef9c3;border:1px solid #fde68a;border-radius:10px;font-size:12px;color:#713f12}</style>
+</head><body><div class="page">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+  <div><h1>PathRare Second Opinion</h1><p style="color:#6b7280;margin:4px 0 0">AI-Powered Rare Disease Diagnostic Report</p></div>
+  <div style="text-align:right;font-size:13px;color:#6b7280"><div>Generated: ${date}</div><div>Patient: ${patientName}</div></div>
+</div>
+<div style="background:${mismatchBg};border-radius:12px;padding:16px 20px;margin-bottom:24px">
+  <div style="font-size:16px;font-weight:800;color:${mismatchColor};margin-bottom:6px">${mismatchLabel}</div>
+  ${result.stated_disease ? `<div style="font-size:13px;color:${mismatchColor}"><b>Patient-stated diagnosis:</b> ${result.stated_disease}</div>` : ''}
+  <div style="font-size:13px;color:${mismatchColor};margin-top:4px"><b>AI primary diagnosis:</b> ${top?.name || '—'} (ORPHA:${top?.orpha_code || '—'})</div>
+  ${result.mismatch_reasoning ? `<div style="font-size:13px;color:${mismatchColor};margin-top:8px">${result.mismatch_reasoning}</div>` : ''}
+</div>
+<h2>AI Clinical Summary</h2>
+<p style="line-height:1.7;color:#374151;font-size:15px">${result.ai_summary}</p>
+<h2>Extracted Symptoms with HPO Codes</h2>
+<table><thead><tr><th>Symptom</th><th>HPO Code</th></tr></thead><tbody>${hpoRows || '<tr><td colspan="2" style="padding:10px 14px;color:#6b7280">No HPO-mapped symptoms extracted.</td></tr>'}</tbody></table>
+<h2>Top Disease Matches</h2>
+<table><thead><tr><th>Disease</th><th>ORPHA Code</th><th>Confidence</th><th>ICD Codes</th><th>OMIM</th></tr></thead><tbody>${matchRows}</tbody></table>
+${topHPO ? `<h2>HPO Evidence for Top Match (${top?.name})</h2><ul style="line-height:1.8;padding-left:20px;font-size:14px">${topHPO}</ul>` : ''}
+<h2>Scoring Methodology</h2>
+<p style="font-size:14px;color:#374151;line-height:1.7">The PathRare diagnostic engine uses a three-source weighted scoring system:<br>
+<b>45% Gemini LLM</b> — clinical reasoning from Google Gemini AI<br>
+<b>35% HPO Jaccard Similarity</b> — evidence-based phenotype matching against ${(result.hpo_codes_used || []).length} extracted HPO codes from the Human Phenotype Ontology database (114,943 curated ORPHA–HPO associations)<br>
+<b>20% Vertex AI Semantic Vector Search</b> — symptom text similarity against disease embeddings</p>
+<div class="disclaimer"><b>⚠ Disclaimer:</b> This report is generated by an AI system and is intended to support, not replace, clinical judgment. It does not constitute a medical diagnosis. Please consult a qualified physician or specialist before making any medical decisions. All HPO, ICD, and OMIM codes reference internationally recognised clinical databases.</div>
+</div></body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pathrare-second-opinion-${Date.now()}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -65,30 +137,56 @@ export default function DiagnosePage() {
     if (f) handleFile(f);
   }, [handleFile]);
 
+  const [saving, setSaving] = useState(false);
+
   // ── Submit ───────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (mode === 'upload' && !file) { setError('Please upload a report file.'); return; }
     if (mode === 'text' && !symptoms.trim()) { setError('Please enter your symptoms.'); return; }
-
-    setError('');
-    setLoading(true);
-    setResult(null);
-
+    setError(''); setLoading(true); setResult(null);
     try {
       const form = new FormData();
       if (mode === 'upload' && file) form.append('file', file);
       else form.append('symptoms', symptoms);
-
+      // Send patient's stated disease for mismatch detection
+      if (profile?.primaryDisease) form.append('stated_disease', profile.primaryDisease);
       const res = await fetch('/api/diagnose', { method: 'POST', body: form });
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.error || 'Diagnostic request failed.');
       setResult(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
+  };
+
+  // ── Save to Clinical Profile ──────────────────────────────────────────────────
+  const handleSave = async () => {
+    if (!result || !profile?.uid) { alert('Please log in to save reports'); return; }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: profile.uid,
+          fileName: file?.name || 'Symptom Input',
+          fileType: file?.type || 'text',
+          reportText: result.report_text_preview,
+          symptoms: result.symptoms_extracted,
+          symptoms_with_hpo: result.symptoms_with_hpo || [],
+          hpo_codes_used: result.hpo_codes_used || [],
+          aiDiagnosis: result.matches[0] || null,
+          allMatches: result.matches,
+          statedDisease: result.stated_disease,
+          diagnosisMatchType: result.diagnosis_match_type,
+          aiSummary: result.ai_summary,
+          mismatchReasoning: result.mismatch_reasoning,
+        }),
+      });
+      if (res.ok) { router.push('/patient/clinical-profile'); }
+      else { const d = await res.json(); alert('Failed to save: ' + d.error); }
+    } catch { alert('Failed to save report. Please try again.'); }
+    finally { setSaving(false); }
   };
 
   const reset = () => { setResult(null); setFile(null); setSymptoms(''); setError(''); };
@@ -237,69 +335,55 @@ export default function DiagnosePage() {
         {result && (
           <motion.div key="results" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
-            {/* Diagnosis Comparison Card */}
+            {/* Mismatch / Match Alert */}
             <div className={`rounded-3xl border p-6 ${
-              result.diagnosis_match_type === 'matches' 
-                ? 'bg-emerald-50 border-emerald-200' 
-                : result.diagnosis_match_type === 'differs'
-                ? 'bg-amber-50 border-amber-200'
-                : 'bg-blue-50 border-blue-200'
+              result.diagnosis_match_type === 'matches' ? 'bg-emerald-50 border-emerald-200' :
+              result.diagnosis_match_type === 'differs'  ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'
             }`}>
               <div className="flex items-center gap-3 mb-4">
-                {result.diagnosis_match_type === 'matches' && (
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <span className="text-emerald-600 text-lg">✓</span>
-                  </div>
-                )}
-                {result.diagnosis_match_type === 'differs' && (
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                    <span className="text-amber-600 text-lg">⚠</span>
-                  </div>
-                )}
-                {result.diagnosis_match_type === 'no_report_diagnosis' && (
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-blue-600 text-lg">ℹ</span>
-                  </div>
-                )}
+                {result.diagnosis_match_type === 'matches'         && <CheckCircle className="w-7 h-7 text-emerald-600" />}
+                {result.diagnosis_match_type === 'differs'          && <AlertTriangle className="w-7 h-7 text-amber-600" />}
+                {result.diagnosis_match_type === 'no_stated_disease' && <BookOpen className="w-7 h-7 text-blue-600" />}
                 <div>
                   <h2 className="text-lg font-bold text-dark-slate">
-                    {result.diagnosis_match_type === 'matches' && 'Diagnosis Confirmed'}
-                    {result.diagnosis_match_type === 'differs' && 'Diagnosis Differs'}
-                    {result.diagnosis_match_type === 'no_report_diagnosis' && 'No Diagnosis in Report'}
+                    {result.diagnosis_match_type === 'matches'          && 'AI Confirms Your Stated Diagnosis'}
+                    {result.diagnosis_match_type === 'differs'           && '⚠ Potential Misdiagnosis Detected'}
+                    {result.diagnosis_match_type === 'no_stated_disease' && 'AI Diagnosis Complete'}
                   </h2>
-                  <p className="text-sm text-light-slate mt-0.5">AI analysis comparison</p>
+                  {result.stated_disease && <p className="text-xs text-light-slate mt-0.5">Your stated diagnosis: <b>{result.stated_disease}</b></p>}
                 </div>
               </div>
-
-              <div className="grid md:grid-cols-2 gap-4 mb-4">
-                {result.report_diagnosis && (
-                  <div className="bg-white/60 rounded-2xl p-4">
-                    <p className="text-xs font-bold text-light-slate mb-1">Report Diagnosis</p>
-                    <p className="font-bold text-dark-slate">{result.report_diagnosis}</p>
-                  </div>
-                )}
-                <div className="bg-white/60 rounded-2xl p-4">
-                  <p className="text-xs font-bold text-light-slate mb-1">AI Diagnosis</p>
-                  <p className="font-bold text-dark-slate">{result.ai_diagnosis}</p>
+              <div className="bg-white/70 rounded-2xl p-4 mb-3">
+                <p className="text-xs font-bold text-light-slate mb-1">AI Primary Diagnosis</p>
+                <p className="font-bold text-dark-slate text-base">{result.matches[0]?.name} <span className="text-xs text-light-slate font-medium">(ORPHA:{result.matches[0]?.orpha_code})</span></p>
+              </div>
+              {result.mismatch_reasoning && (
+                <div className="bg-white/70 rounded-2xl p-4">
+                  <p className="text-xs font-bold text-light-slate mb-1">Clinical Reasoning</p>
+                  <p className="text-sm text-dark-slate leading-relaxed">{result.mismatch_reasoning}</p>
                 </div>
-              </div>
-
-              <div className="bg-white/60 rounded-2xl p-4">
-                <p className="text-xs font-bold text-light-slate mb-1">Reasoning</p>
-                <p className="text-sm text-dark-slate leading-relaxed">{result.reasoning}</p>
-              </div>
+              )}
             </div>
 
-            {/* Symptoms extracted */}
+            {/* AI Summary */}
+            {result.ai_summary && (
+              <div className="bg-gradient-to-br from-primary-blue/5 to-indigo-50 rounded-3xl border border-primary-blue/20 p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-primary-blue" />
+                  <h2 className="text-base font-bold text-dark-slate">AI Clinical Summary</h2>
+                </div>
+                <p className="text-sm text-dark-slate leading-relaxed">{result.ai_summary}</p>
+              </div>
+            )}
+
+            {/* Symptoms */}
             <div className="bg-white rounded-3xl border border-surface-200 p-6">
               <h2 className="text-base font-bold text-dark-slate mb-4 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-primary-blue inline-block" /> Symptoms Extracted ({result.symptoms_extracted.length})
               </h2>
               <div className="flex flex-wrap gap-2">
                 {result.symptoms_extracted.map((s, i) => (
-                  <span key={i} className="px-3 py-1.5 bg-primary-blue/8 text-primary-blue text-xs font-bold rounded-full border border-primary-blue/15">
-                    {s}
-                  </span>
+                  <span key={i} className="px-3 py-1.5 bg-primary-blue/8 text-primary-blue text-xs font-bold rounded-full border border-primary-blue/15">{s}</span>
                 ))}
               </div>
             </div>
@@ -320,25 +404,27 @@ export default function DiagnosePage() {
                           <p className="text-xs text-light-slate font-medium mt-0.5">ORPHA:{match.orpha_code}</p>
                         </div>
                       </div>
-                      <span className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-black border ${colors.badge}`}>
-                        {match.confidence}%
-                      </span>
+                      <span className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-black border ${colors.badge}`}>{match.confidence}%</span>
                     </div>
-
-                    {/* Confidence bar */}
                     <div className="h-1.5 bg-surface-100 rounded-full overflow-hidden mb-4">
                       <motion.div initial={{ width: 0 }} animate={{ width: `${match.confidence}%` }} transition={{ duration: 0.8, delay: i * 0.08, ease: 'easeOut' }}
                         className={`h-full rounded-full ${colors.bar}`} />
                     </div>
-
-                    {/* Badges */}
-                    <div className="flex flex-wrap gap-2">
-                      {match.icd_codes.map((code) => (
-                        <span key={code} className="px-2.5 py-1 bg-surface-100 text-light-slate text-xs font-bold rounded-lg border border-surface-200">ICD {code}</span>
-                      ))}
-                      {match.omim.map((code) => (
-                        <span key={code} className="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-lg border border-amber-200">OMIM {code}</span>
-                      ))}
+                    {match.reasoning && <p className="text-xs text-light-slate font-medium mb-3 italic">{match.reasoning}</p>}
+                    {match.matched_hpo && match.matched_hpo.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-surface-100">
+                        <p className="text-xs font-bold text-light-slate mb-2">🧬 HPO Evidence ({match.matched_hpo.length} phenotypes)</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {match.matched_hpo.slice(0, 6).map((h) => (
+                            <span key={h.code} className="px-2 py-0.5 bg-violet-50 text-violet-700 text-xs font-bold rounded-lg border border-violet-200" title={h.code}>{h.name || h.code}</span>
+                          ))}
+                          {match.matched_hpo.length > 6 && <span className="px-2 py-0.5 bg-surface-100 text-light-slate text-xs rounded-lg border border-surface-200">+{match.matched_hpo.length - 6} more</span>}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {match.icd_codes.map((code) => <span key={code} className="px-2.5 py-1 bg-surface-100 text-light-slate text-xs font-bold rounded-lg border border-surface-200">ICD {code}</span>)}
+                      {match.omim.map((code) => <span key={code} className="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded-lg border border-amber-200">OMIM {code}</span>)}
                     </div>
                   </motion.div>
                 );
@@ -346,48 +432,16 @@ export default function DiagnosePage() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-4">
-              <button onClick={reset}
-                className="flex-1 py-3.5 rounded-2xl border-2 border-surface-200 text-dark-slate font-bold hover:border-primary-blue/30 hover:bg-surface-50 transition-all">
-                ← Run Another
-              </button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button onClick={reset} className="py-3.5 rounded-2xl border-2 border-surface-200 text-dark-slate font-bold hover:border-primary-blue/30 hover:bg-surface-50 transition-all">← Run Another</button>
               <button
-                onClick={async () => {
-                  if (!profile?.uid) {
-                    alert('Please log in to save reports');
-                    return;
-                  }
-                  
-                  try {
-                    const res = await fetch('/api/reports', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        patientId: profile.uid,
-                        fileName: file?.name || 'Symptom Input',
-                        fileType: file?.type || 'text',
-                        reportText: result.report_text_preview,
-                        symptoms: result.symptoms_extracted,
-                        aiDiagnosis: result.matches[0],
-                        allMatches: result.matches,
-                        reportDiagnosis: result.report_diagnosis,
-                        diagnosisMatchType: result.diagnosis_match_type,
-                        reasoning: result.reasoning,
-                      }),
-                    });
-                    
-                    if (res.ok) {
-                      router.push('/patient/clinical-profile');
-                    } else {
-                      const data = await res.json();
-                      alert('Failed to save: ' + data.error);
-                    }
-                  } catch (err) {
-                    alert('Failed to save report');
-                  }
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary-blue text-white font-bold hover:bg-blue-700 shadow-[0_4px_14px_rgba(15,93,227,0.3)] transition-all">
-                Save to Clinical Profile <ChevronRight className="w-4 h-4" />
+                onClick={() => downloadSecondOpinionPack(result, profile?.displayName || profile?.firstName || 'Patient')}
+                className="flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-violet-200 bg-violet-50 text-violet-700 font-bold hover:bg-violet-100 transition-all">
+                <Download className="w-4 h-4" /> Second Opinion Pack
+              </button>
+              <button onClick={handleSave} disabled={saving}
+                className="flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary-blue text-white font-bold hover:bg-blue-700 shadow-[0_4px_14px_rgba(15,93,227,0.3)] transition-all disabled:opacity-60">
+                {saving ? 'Saving...' : <><ChevronRight className="w-4 h-4" /> Save to Profile</>}
               </button>
             </div>
           </motion.div>
@@ -397,3 +451,4 @@ export default function DiagnosePage() {
     </div>
   );
 }
+
