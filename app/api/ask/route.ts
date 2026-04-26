@@ -186,6 +186,17 @@ export async function POST(req: NextRequest) {
     const question = (body.question as string | undefined)?.trim();
     const patientId = (body.patientId as string | undefined)?.trim();
     const history: { role: string; content: string }[] = body.history ?? [];
+    const lang: string = (body.lang as string | undefined) ?? 'en';
+
+    const LANGUAGE_NAMES: Record<string, string> = {
+      en: 'English', hi: 'Hindi', ta: 'Tamil', mr: 'Marathi',
+      te: 'Telugu', bn: 'Bengali', kn: 'Kannada', gu: 'Gujarati',
+      pa: 'Punjabi', or: 'Odia',
+    };
+    const responseLang = LANGUAGE_NAMES[lang] ?? 'English';
+    const langInstruction = lang !== 'en'
+      ? `\n\nIMPORTANT: You MUST respond entirely in ${responseLang}. Every word of your answer, including medical terms where possible, must be in ${responseLang}. Do not switch to English.`
+      : '';
 
     if (!question) {
       return NextResponse.json({ error: "A question is required." }, { status: 400 });
@@ -241,7 +252,7 @@ Your core behaviour:
 - When you cite from the knowledge base, name the source (e.g., "According to WHO guidelines..."). When using your own training, you can say "Based on current medical understanding...".
 - If the question involves emergency symptoms, ALWAYS start with "Call 112 immediately" and give step-by-step first aid.
 - If you need one specific piece of information to give a better personalised answer, ask ONE short follow-up question at the end.
-- End every answer with a brief warm reminder to consult their specialist.
+- End every answer with a brief warm reminder to consult their specialist.${langInstruction}
 ${patientSection}
 ${ragSection}${historyBlock}
 

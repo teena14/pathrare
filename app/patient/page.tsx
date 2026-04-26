@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { useT } from '@/lib/use-t';
 
 // ── Animated visuals — design-system palette only (#0F5DE3, #23323D, #42596A) ─
 
@@ -84,38 +85,13 @@ const CareVisual = () => (
   </svg>
 );
 
-// ── Card data — all use design-system palette ─────────────────────────────────
-const CARDS = [
-  {
-    title: 'Diagnose',
-    desc: 'AI matches your symptoms against the Orphanet rare disease dataset.',
-    href: '/patient/diagnose',
-    Visual: DiagnoseVisual,
-  },
-  {
-    title: 'Life Assist',
-    desc: 'Ranked financial aid, NGO support, medical access, and assistive tech.',
-    href: '/patient/life-assist',
-    Visual: LifeAssistVisual,
-  },
-  {
-    title: 'Clinical Profile',
-    desc: 'Your structured clinical identity — symptoms, timeline, and reports.',
-    href: '/patient/clinical-profile',
-    Visual: ClinicalVisual,
-  },
-  {
-    title: 'Community',
-    desc: 'Connect with families navigating the same rare disease journey.',
-    href: '/patient/community',
-    Visual: CommunityVisual,
-  },
-  {
-    title: 'Care',
-    desc: 'AI-powered medical assistant grounded in WHO, NIH, Orphanet, OMIM, Red Cross & India NHM.',
-    href: '/patient/care',
-    Visual: CareVisual,
-  },
+// ── Card data — keys match dashboard translations ────────────────────────────
+const CARD_KEYS = [
+  { titleKey: 'cardDiagnoseTitle',  descKey: 'cardDiagnoseDesc',   href: '/patient/diagnose',          Visual: DiagnoseVisual },
+  { titleKey: 'cardLifeAssistTitle',descKey: 'cardLifeAssistDesc',  href: '/patient/life-assist',       Visual: LifeAssistVisual },
+  { titleKey: 'cardClinicalTitle',  descKey: 'cardClinicalDesc',    href: '/patient/clinical-profile',  Visual: ClinicalVisual },
+  { titleKey: 'cardCommunityTitle', descKey: 'cardCommunityDesc',   href: '/patient/community',         Visual: CommunityVisual },
+  { titleKey: 'cardCareTitle',      descKey: 'cardCareDesc',        href: '/patient/care',              Visual: CareVisual },
 ];
 
 // ── Stagger config ─────────────────────────────────────────────────────────────
@@ -131,6 +107,7 @@ const cardVariant = {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function PatientHomePage() {
   const { profile } = useAuth();
+  const t = useT('dashboard');
   const name = (profile as any)?.firstName ?? profile?.displayName?.split(' ')[0] ?? 'there';
 
   return (
@@ -140,9 +117,9 @@ export default function PatientHomePage() {
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] as const }}>
 
         <h1 className="text-4xl font-black text-dark-slate tracking-tight leading-tight mt-7">
-          Welcome,<span className="text-primary-blue">{name}</span>
+          {t('welcome')}<span className="text-primary-blue">{name}</span>
         </h1>
-        <p className="text-light-slate font-medium mt-2 text-base">Your rare disease companion. Where are we focusing today?</p>
+        <p className="text-light-slate font-medium mt-2 text-base">{t('subtitle')}</p>
       </motion.div>
 
       {/* Cards — 2-col grid */}
@@ -152,36 +129,31 @@ export default function PatientHomePage() {
         animate="show"
         className="grid grid-cols-1 sm:grid-cols-3 gap-4"
       >
-        {CARDS.map((card) => {
+        {CARD_KEYS.map((card) => {
           const { Visual } = card;
           return (
-            <motion.div key={card.title} variants={cardVariant}>
+            <motion.div key={card.titleKey} variants={cardVariant}>
               <Link href={card.href} className="group block h-full">
                 <motion.div
                   whileHover={{ y: -3, boxShadow: '0 12px 40px rgba(15,93,227,0.12)' }}
                   transition={{ duration: 0.2 }}
                   className="h-full bg-white rounded-3xl border border-surface-200 p-7 flex items-start gap-5 hover:border-primary-blue/30 transition-colors"
                 >
-                  {/* Animated visual */}
                   <div className="shrink-0 w-14 h-14 rounded-2xl bg-surface-50 border border-surface-200 flex items-center justify-center group-hover:border-primary-blue/20 group-hover:bg-primary-blue/5 transition-all">
                     <Visual />
                   </div>
-
-                  {/* Text */}
                   <div className="pt-1">
                     <h2 className="font-bold text-dark-slate text-lg mb-1 group-hover:text-primary-blue transition-colors">
-                      {card.title}
+                      {t(card.titleKey)}
                     </h2>
-                    <p className="text-light-slate text-sm font-medium leading-relaxed">{card.desc}</p>
+                    <p className="text-light-slate text-sm font-medium leading-relaxed">{t(card.descKey)}</p>
                   </div>
                 </motion.div>
               </Link>
             </motion.div>
           );
         })}
-
-        {/* Empty state filler for odd card */}
-        {CARDS.length % 2 !== 0 && (
+        {CARD_KEYS.length % 2 !== 0 && (
           <div className="hidden sm:block" />
         )}
       </motion.div>

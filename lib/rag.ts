@@ -132,22 +132,41 @@ export function retrieveChunksByCategory(
  * Embed a query string using Vertex AI text-embedding-004.
  */
 export async function embedQuery(query: string): Promise<number[]> {
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (!credentialsPath) {
-    throw new Error("GOOGLE_APPLICATION_CREDENTIALS is not configured.");
+  const { GoogleAuth } = await import("google-auth-library");
+  let auth: InstanceType<typeof GoogleAuth>;
+
+  // 1) Vercel / any env: full JSON stored as env var (preferred)
+  const serviceAccountJson = process.env.GCP_SERVICE_ACCOUNT_JSON ?? process.env.GCP_SERVICE_ACCOUNT;
+  if (serviceAccountJson) {
+    const creds = JSON.parse(serviceAccountJson);
+    if (creds.private_key) {
+      creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+    }
+    auth = new GoogleAuth({
+      credentials: creds,
+      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    });
+  // 2) Local dev: path to JSON file
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    auth = new GoogleAuth({
+      credentials: JSON.parse(
+        fs.readFileSync(
+          path.isAbsolute(credentialsPath)
+            ? credentialsPath
+            : path.join(/* turbopackIgnore: true */ process.cwd(), credentialsPath.replace(/^\.\//,"")),
+          "utf-8"
+        )
+      ),
+      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    });
+  // 3) Cloud Run / GCE: Application Default Credentials
+  } else {
+    auth = new GoogleAuth({
+      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    });
   }
 
-  const credPath = path.isAbsolute(credentialsPath)
-    ? credentialsPath
-    : path.join(/* turbopackIgnore: true */ process.cwd(), credentialsPath.replace(/^\.\//, ""));
-
-  const creds = JSON.parse(fs.readFileSync(credPath, "utf-8"));
-
-  const { GoogleAuth } = await import("google-auth-library");
-  const auth = new GoogleAuth({
-    credentials: creds,
-    scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-  });
   const client = await auth.getClient();
   const token = await client.getAccessToken();
 

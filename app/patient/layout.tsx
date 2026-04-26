@@ -5,20 +5,23 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Activity, HeartHandshake, Users, HeartPulse, Microscope, LogOut, ArrowLeft, Settings } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useEffect } from 'react';
+import LanguagePicker from '@/components/LanguagePicker';
+import { useT } from '@/lib/use-t';
 
 // ── 5 constant tabs — always shown ───────────────────────────────────────────
 const NAV = [
-  { name: 'Diagnose', href: '/patient/diagnose', icon: Microscope },
-  { name: 'Life Assist', href: '/patient/life-assist', icon: HeartHandshake },
-  { name: 'Care', href: '/patient/care', icon: HeartPulse },
-  { name: 'Community', href: '/patient/community', icon: Users },
-  { name: 'Clinical Profile', href: '/patient/clinical-profile', icon: Activity },
+  { name: 'Diagnose',         tKey: 'diagnose',        href: '/patient/diagnose',         icon: Microscope },
+  { name: 'Life Assist',      tKey: 'lifeAssist',      href: '/patient/life-assist',      icon: HeartHandshake },
+  { name: 'Care',             tKey: 'care',            href: '/patient/care',             icon: HeartPulse },
+  { name: 'Community',        tKey: 'community',       href: '/patient/community',        icon: Users },
+  { name: 'Clinical Profile', tKey: 'clinicalProfile', href: '/patient/clinical-profile', icon: Activity },
 ];
 
 export default function PatientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { signOut, profile, loading } = useAuth();
   const router = useRouter();
+  const t = useT('nav');
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -75,7 +78,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
                       }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{item.name}</span>
+                    <span className="hidden sm:inline">{t(item.tKey)}</span>
                   </Link>
                 );
               })}
@@ -89,14 +92,15 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
               onClick={handleLogout}
               className="flex items-center gap-1.5 text-xs font-bold text-light-slate hover:text-dark-slate transition-colors"
             >
-              <LogOut className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Logout</span>
+              <LogOut className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t('logout')}</span>
             </button>
             <Link
               href="/auth/complete-profile"
               className="flex items-center gap-1.5 text-xs font-bold text-light-slate hover:text-dark-slate transition-colors"
             >
-              <Settings className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Settings</span>
+              <Settings className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t('settings')}</span>
             </Link>
+            <LanguagePicker />
             <div className="h-7 w-7 rounded-full bg-primary-blue flex items-center justify-center text-white text-xs font-bold">
               {initials}
             </div>
@@ -120,7 +124,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
             <span className="w-6 h-6 rounded-lg bg-surface-100 group-hover:bg-primary-blue/10 flex items-center justify-center transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" />
             </span>
-            Back to Dashboard
+            {t('backToDashboard')}
           </Link>
         )}
 

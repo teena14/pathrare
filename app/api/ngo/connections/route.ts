@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     const snap = await query.get();
     const requests = snap.docs
-      .map((doc) => serializeDoc(doc))
+      .map((doc) => serializeDoc(doc) as any)
       .sort((left, right) => String(right.updated_at ?? right.created_at ?? '').localeCompare(String(left.updated_at ?? left.created_at ?? '')));
 
     return NextResponse.json({ requests, patientId: patientId || null, ngoId: ngoId || null });

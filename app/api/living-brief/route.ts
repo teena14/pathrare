@@ -100,6 +100,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const lang: string = body.lang ?? 'en';
+    const LANGUAGE_NAMES: Record<string, string> = {
+      en: 'English', hi: 'Hindi', ta: 'Tamil', mr: 'Marathi',
+      te: 'Telugu', bn: 'Bengali', kn: 'Kannada', gu: 'Gujarati',
+      pa: 'Punjabi', or: 'Odia',
+    };
+    const responseLang = LANGUAGE_NAMES[lang] ?? 'English';
+    const langInstruction = lang !== 'en'
+      ? `\n\nIMPORTANT: Write the entire Living Brief in ${responseLang}. All headings, bullet points, and text must be in ${responseLang}.`
+      : '';
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -139,7 +150,7 @@ Guidelines:
 - Write at B2 English level — clear and accessible to non-medical readers.
 - Use empathetic, supportive language.
 - Be clinically accurate but avoid unnecessary jargon.
-- Format with clear markdown headings and bullet points.
+- Format with clear markdown headings and bullet points.${langInstruction}
 
 Return ONLY the Living Brief markdown content. No preamble.`;
 

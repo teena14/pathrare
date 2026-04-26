@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ChevronRight, MessageSquareText, Landmark, GraduationCap, Stethoscope, Cpu } from 'lucide-react';
 import { canOpenTaskChat, dedupeSupportTasks, humanizeTaskStatus, mapSupportTask, SupportTask } from '@/lib/task-chat';
+import { useT } from '@/lib/use-t';
 
 const CATEGORIES = [
   { id: 'financial', label: 'Financial & Legal Aid', icon: Landmark, desc: 'Schemes, disability certificates, legal rights' },
@@ -16,6 +17,7 @@ const CATEGORIES = [
 export default function LifeAssistLandingPage() {
   const [supportTasks, setSupportTasks] = useState<SupportTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const t = useT('lifeAssist');
 
   useEffect(() => {
     let active = true;
@@ -63,9 +65,9 @@ export default function LifeAssistLandingPage() {
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-8">
       <div>
-        <h1 className="text-3xl font-black text-dark-slate">Life Assist</h1>
+        <h1 className="text-3xl font-black text-dark-slate">{t('title')}</h1>
         <p className="text-light-slate font-medium mt-1">
-          Choose the support area you want to explore. Each section opens a dedicated feed of backend-curated resources matched to your profile.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -85,7 +87,7 @@ export default function LifeAssistLandingPage() {
                 <item.icon className="w-8 h-8 text-primary-blue" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-dark-slate mb-1">{item.label}</h2>
+                <h2 className="text-lg font-bold text-dark-slate mb-1">{t(`cat${item.id.charAt(0).toUpperCase() + item.id.slice(1)}`) || item.label}</h2>
                 <p className="text-sm font-medium text-light-slate leading-relaxed">{item.desc}</p>
               </div>
             </Link>
@@ -95,7 +97,7 @@ export default function LifeAssistLandingPage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-2xl font-black text-dark-slate">Help Requested</h2>
+          <h2 className="text-2xl font-black text-dark-slate">{t('helpRequested')}</h2>
           <p className="text-sm font-medium text-light-slate mt-1">
             Every support request you have created across all Life Assist categories appears here.
           </p>
@@ -109,7 +111,7 @@ export default function LifeAssistLandingPage() {
 
         {!loading && supportTasks.length === 0 && (
           <div className="rounded-3xl border border-surface-200 bg-white p-6 text-sm font-medium text-light-slate">
-            No help requests yet. Open any category above and request volunteer help when you need it.
+            {t('noRequests')}
           </div>
         )}
 

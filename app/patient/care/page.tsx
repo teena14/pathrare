@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { HeartPulse } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { HeartPulse, Mic, MicOff, Volume2, VolumeX, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useLang } from "@/lib/language-context";
+import { useT } from "@/lib/use-t";
 
 interface Source {
   title: string;
@@ -65,6 +67,8 @@ function getSourceInitial(source: string): string {
 
 export default function CarePage() {
   const { profile } = useAuth();
+  const { lang } = useLang();
+  const t = useT('care');
   const patientId = profile?.uid ?? null;
   const patientDisease = profile?.primaryDisease ?? null;
 
@@ -74,6 +78,15 @@ export default function CarePage() {
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // ── Voice Input (STT) state ──────────────────────────────────────────────────
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // ── Read Aloud (TTS) state ───────────────────────────────────────────────────
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
 
   // Build welcome message personalised to disease
   useEffect(() => {
@@ -96,6 +109,83 @@ export default function CarePage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // ── Voice Input ──────────────────────────────────────────────────────────────
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        setTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append('audio', audioBlob, `voice.${mimeType.includes('webm') ? 'webm' : 'mp4'}`);
+          form.append('lang', lang);
+          const res = await fetch('/api/stt', { method: 'POST', body: form });
+          const data = await res.json();
+          if (data.text) {
+            setInput((prev) => (prev ? prev + ' ' + data.text : data.text));
+            inputRef.current?.focus();
+          }
+        } catch (err) {
+          console.error('[stt]', err);
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      mediaRecorder.start();
+      setRecording(true);
+    } catch (err) {
+      console.error('Mic access denied:', err);
+      alert('Microphone access is required for voice input. Please allow microphone access in your browser.');
+    }
+  }, [lang]);
+
+  const stopRecording = useCallback(() => {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  }, []);
+
+  // ── Read Aloud ───────────────────────────────────────────────────────────────
+  const speak = useCallback((msgId: string, text: string) => {
+    // If already speaking this message, stop it
+    if (speakingId === msgId) {
+      window.speechSynthesis.cancel();
+      setSpeakingId(null);
+      return;
+    }
+    // Stop any current speech
+    window.speechSynthesis.cancel();
+    setSpeakingId(msgId);
+
+    // Map lang code → BCP-47 for Web Speech API
+    const LANG_BCP47: Record<string, string> = {
+      en: 'en-IN', hi: 'hi-IN', ta: 'ta-IN', mr: 'mr-IN',
+      te: 'te-IN', bn: 'bn-IN', kn: 'kn-IN', gu: 'gu-IN',
+      pa: 'pa-IN', or: 'or-IN',
+    };
+
+    // Strip markdown for cleaner speech
+    const cleanText = text.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/[#•]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = LANG_BCP47[lang] ?? 'en-IN';
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+    window.speechSynthesis.speak(utterance);
+  }, [speakingId, lang]);
+
+  // Cancel speech on unmount
+  useEffect(() => () => { window.speechSynthesis?.cancel(); }, []);
 
   const toggleSources = (id: string) => {
     setExpandedSources((prev) => {
@@ -143,6 +233,7 @@ export default function CarePage() {
           question,
           patientId: patientId ?? undefined,
           history: buildHistory(),
+          lang,
         }),
       });
       const data = await res.json();
@@ -190,7 +281,7 @@ export default function CarePage() {
           <HeartPulse className="care-header-icon-svg" />
         </div>
         <div className="care-header-text">
-          <h1 className="care-title">Care Assistant</h1>
+          <h1 className="care-title">{t('title')}</h1>
           <p className="care-subtitle">
             {patientDisease
               ? `Personalised for: ${patientDisease} · WHO · NIH · CDC · Orphanet · OMIM · NHM India`
@@ -208,8 +299,7 @@ export default function CarePage() {
           <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z" fill="currentColor" />
         </svg>
         <p>
-          Educational information from authoritative medical sources.{" "}
-          <strong>Not a substitute for professional medical advice.</strong>
+          {t('disclaimer')}
         </p>
       </div>
 
@@ -299,6 +389,26 @@ export default function CarePage() {
                   )}
                 </div>
               )}
+              {/* Read Aloud button — only on assistant messages */}
+              {!msg.loading && msg.role === 'assistant' && msg.id !== 'welcome' && (
+                <button
+                  onClick={() => speak(msg.id, msg.content)}
+                  title={speakingId === msg.id ? 'Stop reading' : 'Read aloud'}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    marginTop: 6, padding: '4px 10px', borderRadius: 20,
+                    border: '1.5px solid #e2e8f0',
+                    background: speakingId === msg.id ? '#eff6ff' : 'transparent',
+                    cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                    color: speakingId === msg.id ? '#0F5DE3' : '#94a3b8',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {speakingId === msg.id
+                    ? <><VolumeX size={12} /> Stop</>
+                    : <><Volume2 size={12} /> Read aloud</>}
+                </button>
+              )}
             </div>
 
             {msg.role === "user" && (
@@ -317,7 +427,7 @@ export default function CarePage() {
       {showSuggestions && (
         <div className="care-suggestions">
           <p className="care-suggestions-label">
-            {patientDisease ? `Suggested for ${patientDisease} patients` : "Suggested questions"}
+            {patientDisease ? `${t('suggestLabel')} — ${patientDisease}` : t('suggestLabel')}
           </p>
           <div className="care-suggestions-grid">
             {SUGGESTED_QUESTIONS.map((q, i) => (
@@ -341,12 +451,39 @@ export default function CarePage() {
             onKeyDown={handleKeyDown}
             placeholder={
               patientDisease
-                ? `Ask about ${patientDisease}, your care, or medical questions…`
-                : "Ask a care or medical question…"
+                ? `${t('placeholder').replace('…', '')} — ${patientDisease}…`
+                : t('placeholder')
             }
             rows={1}
             disabled={loading}
           />
+          {/* Mic button */}
+          <button
+            id="care-mic-btn"
+            onClick={recording ? stopRecording : startRecording}
+            disabled={transcribing || loading}
+            aria-label={recording ? 'Stop recording' : 'Start voice input'}
+            title={recording ? 'Click to stop and transcribe' : 'Click to speak'}
+            style={{
+              flexShrink: 0,
+              width: 40, height: 40,
+              borderRadius: '50%',
+              border: recording ? '2px solid #ef4444' : '1.5px solid #e2e8f0',
+              background: recording ? '#fef2f2' : transcribing ? '#eff6ff' : '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: transcribing ? 'wait' : 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: recording ? '0 0 0 4px rgba(239,68,68,0.15)' : 'none',
+              animation: recording ? 'micPulse 1.2s ease-in-out infinite' : 'none',
+            }}
+          >
+            {transcribing
+              ? <Loader2 size={16} color="#0F5DE3" style={{ animation: 'spin 1s linear infinite' }} />
+              : recording
+                ? <MicOff size={16} color="#ef4444" />
+                : <Mic size={16} color="#94a3b8" />}
+          </button>
+
           <button
             id="care-send-btn"
             className="care-send-btn"
@@ -363,10 +500,18 @@ export default function CarePage() {
             )}
           </button>
         </div>
-        <p className="care-input-hint">Enter to send · Shift+Enter for new line</p>
+        <p className="care-input-hint">{t('hint')}</p>
       </div>
 
       <style>{`
+        @keyframes micPulse {
+          0%, 100% { box-shadow: 0 0 0 4px rgba(239,68,68,0.15); }
+          50% { box-shadow: 0 0 0 8px rgba(239,68,68,0.25); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
         .care-page {
           display: flex;
           flex-direction: column;

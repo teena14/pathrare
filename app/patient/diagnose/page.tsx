@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, Sparkles, AlertCircle, ChevronRight, X, Microscope, Download, BookOpen, CheckCircle, AlertTriangle, Edit3, RefreshCw, Check, SkipForward, Dna } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { useLang } from '@/lib/language-context';
+import { useT } from '@/lib/use-t';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface DiseaseMatch {
@@ -110,6 +112,8 @@ const ACCEPTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg
 
 export default function DiagnosePage() {
   const { profile } = useAuth();
+  const { lang } = useLang();
+  const t = useT('diagnose');
   const router = useRouter();
   const [mode, setMode] = useState<'upload' | 'text'>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -151,6 +155,7 @@ export default function DiagnosePage() {
       else form.append('symptoms', symptoms);
       // Send patient's stated disease for mismatch detection
       if (profile?.primaryDisease) form.append('stated_disease', profile.primaryDisease);
+      form.append('lang', lang);
       const res = await fetch('/api/diagnose', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Diagnostic request failed.');
@@ -237,8 +242,8 @@ export default function DiagnosePage() {
           <Microscope className="w-7 h-7 text-primary-blue" />
         </div>
         <div>
-          <h1 className="text-3xl font-black text-dark-slate tracking-tight">Diagnostic Inference</h1>
-          <p className="text-light-slate font-medium mt-0.5">Upload a medical report or describe symptoms — our AI matches rare diseases from the Orphanet dataset.</p>
+          <h1 className="text-3xl font-black text-dark-slate tracking-tight">{t('title')}</h1>
+          <p className="text-light-slate font-medium mt-0.5">{t('subtitle')}</p>
         </div>
       </div>
 
@@ -256,7 +261,7 @@ export default function DiagnosePage() {
                   onClick={() => { setMode(m); setError(''); }}
                   className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${mode === m ? 'bg-white text-primary-blue shadow-md' : 'text-light-slate hover:text-dark-slate'}`}
                 >
-                  {m === 'upload' ? <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> Upload Report</span> : <span className="flex items-center gap-2"><Edit3 className="w-4 h-4" /> Describe Symptoms</span>}
+                  {m === 'upload' ? <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> {t('uploadReport')}</span> : <span className="flex items-center gap-2"><Edit3 className="w-4 h-4" /> {t('describeSymp')}</span>}
                 </button>
               ))}
             </div>
@@ -297,7 +302,7 @@ export default function DiagnosePage() {
                       <Upload className="w-9 h-9 text-primary-blue" />
                     </motion.div>
                     <div>
-                      <p className="text-xl font-bold text-dark-slate mb-1">Drop your report here</p>
+                      <p className="text-xl font-bold text-dark-slate mb-1">{t('dropHere')}</p>
                       <p className="text-light-slate text-sm">or click to browse — PDF, PNG, JPG, WebP supported</p>
                     </div>
                   </div>
@@ -442,7 +447,7 @@ export default function DiagnosePage() {
               <div className="bg-gradient-to-br from-primary-blue/5 to-indigo-50 rounded-3xl border border-primary-blue/20 p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Sparkles className="w-5 h-5 text-primary-blue" />
-                  <h2 className="text-base font-bold text-dark-slate">AI Clinical Summary</h2>
+                  <h2 className="text-base font-bold text-dark-slate">{t('aiSummary')}</h2>
                 </div>
                 <p className="text-sm text-dark-slate leading-relaxed">{result.ai_summary}</p>
               </div>
@@ -451,7 +456,7 @@ export default function DiagnosePage() {
             {/* Symptoms */}
             <div className="bg-white rounded-3xl border border-surface-200 p-6">
               <h2 className="text-base font-bold text-dark-slate mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-blue inline-block" /> Symptoms Extracted ({result.symptoms_extracted.length})
+                <span className="w-2 h-2 rounded-full bg-primary-blue inline-block" /> {t('sympExtracted')} ({result.symptoms_extracted.length})
               </h2>
               <div className="flex flex-wrap gap-2">
                 {result.symptoms_extracted.map((s, i) => (
@@ -462,7 +467,7 @@ export default function DiagnosePage() {
 
             {/* Disease matches */}
             <div className="space-y-4">
-              <h2 className="text-xl font-black text-dark-slate">Top Disease Matches</h2>
+              <h2 className="text-xl font-black text-dark-slate">{t('topMatches')}</h2>
               {result.matches.map((match, i) => {
                 const colors = confidenceColor(match.confidence);
                 return (
@@ -505,7 +510,7 @@ export default function DiagnosePage() {
 
             {/* Actions */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <button onClick={reset} className="py-3.5 rounded-2xl border-2 border-surface-200 text-dark-slate font-bold hover:border-primary-blue/30 hover:bg-surface-50 transition-all">← Run Another</button>
+              <button onClick={reset} className="py-3.5 rounded-2xl border-2 border-surface-200 text-dark-slate font-bold hover:border-primary-blue/30 hover:bg-surface-50 transition-all">{t('runAnother')}</button>
               <button
                 onClick={() => downloadSecondOpinionPack(result, profile?.displayName || profile?.firstName || 'Patient')}
                 className="flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-violet-200 bg-violet-50 text-violet-700 font-bold hover:bg-violet-100 transition-all">
@@ -513,7 +518,7 @@ export default function DiagnosePage() {
               </button>
               <button onClick={handleSave} disabled={saving}
                 className="flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary-blue text-white font-bold hover:bg-blue-700 shadow-[0_4px_14px_rgba(15,93,227,0.3)] transition-all disabled:opacity-60">
-                {saving ? 'Saving...' : <><ChevronRight className="w-4 h-4" /> Save to Profile</>}
+                {saving ? 'Saving...' : <><ChevronRight className="w-4 h-4" /> {t('saveToProfile')}</>}
               </button>
             </div>
           </motion.div>

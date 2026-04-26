@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Calendar, Share2, Trash2, Plus, X, Copy, Download, AlertTriangle, CheckCircle, BookOpen, Sparkles, RefreshCw, Dna, SkipForward, Check } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { useT } from '@/lib/use-t';
 
 interface AIReport {
   id: string; patientId: string; fileName: string; createdAt: string;
@@ -57,6 +58,7 @@ ${topHPO ? `<h2>HPO Evidence — ${top?.name}</h2><ul style="font-size:14px;line
 
 export default function ClinicalProfilePage() {
   const { profile } = useAuth();
+  const t = useT('clinicalProfile');
   const [tab, setTab] = useState<'reports' | 'documents'>('reports');
   const [reports, setReports] = useState<AIReport[]>([]);
   const [docs, setDocs] = useState<MedDoc[]>([]);
@@ -149,12 +151,12 @@ export default function ClinicalProfilePage() {
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-2xl bg-primary-blue/10"><FileText className="w-7 h-7 text-primary-blue" /></div>
           <div>
-            <h1 className="text-3xl font-black text-dark-slate">Clinical Profile</h1>
+            <h1 className="text-3xl font-black text-dark-slate">{t('title')}</h1>
             <p className="text-light-slate font-medium mt-0.5">{profile?.displayName || 'Patient'} — {reports.length} AI reports · {docs.length} documents</p>
           </div>
         </div>
         <button onClick={generateShare} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-blue text-white font-bold hover:bg-blue-700 transition-colors text-sm">
-          <Share2 className="w-4 h-4" /> Share Profile
+          <Share2 className="w-4 h-4" /> {t('shareProfile')}
         </button>
       </div>
 
@@ -181,10 +183,10 @@ export default function ClinicalProfilePage() {
 
       {/* Tabs */}
       <div className="inline-flex p-1 bg-surface-100 rounded-2xl gap-1">
-        {(['reports', 'documents'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${tab === t ? 'bg-white text-dark-slate shadow-sm' : 'text-light-slate hover:text-dark-slate'}`}>
-            {t === 'reports' ? <span className="flex items-center gap-2"><Dna className="w-4 h-4" /> AI Diagnoses ({reports.length})</span> : <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> Medical Documents ({docs.length})</span>}
+        {(['reports', 'documents'] as const).map(tabKey => (
+          <button key={tabKey} onClick={() => setTab(tabKey)}
+            className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${tab === tabKey ? 'bg-white text-dark-slate shadow-sm' : 'text-light-slate hover:text-dark-slate'}`}>
+            {tabKey === 'reports' ? <span className="flex items-center gap-2"><Dna className="w-4 h-4" /> {t('tabDiagnoses')} ({reports.length})</span> : <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> {t('tabDocuments')} ({docs.length})</span>}
           </button>
         ))}
       </div>
@@ -195,10 +197,10 @@ export default function ClinicalProfilePage() {
           {reports.length === 0 ? (
             <div className="bg-white rounded-3xl border border-surface-200 p-12 text-center">
               <Sparkles className="w-12 h-12 text-surface-300 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-dark-slate mb-2">No AI diagnoses yet</h3>
+              <h3 className="text-xl font-bold text-dark-slate mb-2">{t('noDiagnoses')}</h3>
               <p className="text-light-slate mb-6">Run the diagnostic engine to get your first AI-powered diagnosis.</p>
               <a href="/patient/diagnose" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-blue text-white font-bold hover:bg-blue-700 transition-colors">
-                <Plus className="w-4 h-4" /> Start Diagnosis
+                <Plus className="w-4 h-4" /> {t('startDiagnosis')}
               </a>
             </div>
           ) : reports.map(report => {
@@ -300,7 +302,7 @@ export default function ClinicalProfilePage() {
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-primary-blue/10"><Plus className="w-5 h-5 text-primary-blue" /></div>
               <div>
-                <p className="font-bold text-dark-slate text-sm">Upload Medical Document</p>
+                <p className="font-bold text-dark-slate text-sm">{t('uploadDoc')}</p>
                 <p className="text-xs text-light-slate">PDF, images — stored securely in your profile</p>
               </div>
             </div>
@@ -314,7 +316,7 @@ export default function ClinicalProfilePage() {
           {docs.length === 0 ? (
             <div className="bg-white rounded-3xl border border-surface-200 p-12 text-center">
               <FileText className="w-12 h-12 text-surface-300 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-dark-slate mb-2">No documents yet</h3>
+              <h3 className="text-xl font-bold text-dark-slate mb-2">{t('noDocs')}</h3>
               <p className="text-light-slate">Upload your medical reports, prescriptions, or test results.</p>
             </div>
           ) : docs.map(doc => (

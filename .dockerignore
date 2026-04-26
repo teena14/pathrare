@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env.development
+.env.test
+.env.production
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.vercel
+deploy.ps1
+cloudbuild.yaml

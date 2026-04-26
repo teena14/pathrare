@@ -50,6 +50,49 @@ let vectorIndex: VectorEntry[] | null = null;  // null = not loaded yet, [] = no
 let cachedModels: string[] | null = null;
 let hpoLoaded = false;
 
+async function getGoogleAccessToken(scopes: string[]): Promise<string | null> {
+  try {
+    const { GoogleAuth } = await import("google-auth-library");
+    let auth: InstanceType<typeof GoogleAuth>;
+
+    // 1) Vercel / any env: full JSON stored as env var (preferred)
+    const serviceAccountJson = process.env.GCP_SERVICE_ACCOUNT ?? process.env.GCP_SERVICE_ACCOUNT_JSON;
+    if (serviceAccountJson) {
+      const creds = JSON.parse(serviceAccountJson);
+      if (creds.private_key) {
+        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+      }
+      auth = new GoogleAuth({
+        credentials: creds,
+        scopes,
+      });
+    // 2) Local dev: path to JSON file via GOOGLE_APPLICATION_CREDENTIALS
+    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      auth = new GoogleAuth({
+        credentials: JSON.parse(
+          fs.readFileSync(
+            path.isAbsolute(credentialsPath)
+              ? credentialsPath
+              : path.join(process.cwd(), credentialsPath),
+            "utf-8"
+          )
+        ),
+        scopes,
+      });
+    // 3) Cloud Run / GCE: Application Default Credentials
+    } else {
+      auth = new GoogleAuth({ scopes });
+    }
+
+    const token = await (await auth.getClient()).getAccessToken();
+    return token.token ?? null;
+  } catch (error) {
+    console.warn("[diagnose] Failed to obtain Google access token:", error);
+    return null;
+  }
+}
+
 // ── Orphanet loader ────────────────────────────────────────────────────────────
 function loadOrphanetData() {
   if (alignments.length > 0) return;
@@ -87,17 +130,11 @@ function loadVectorIndex() {
 // ── HPO loader ─────────────────────────────────────────────────────────────────
 // ── Vertex AI — embed patient symptom text ────────────────────────────────────
 async function embedPatientText(text: string): Promise<number[] | null> {
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (!credentialsPath || !vectorIndex?.length) return null;
+  if (!vectorIndex?.length) return null;
 
   try {
-    const credPath = path.isAbsolute(credentialsPath)
-      ? credentialsPath
-      : path.join(process.cwd(), credentialsPath);
-    const creds = JSON.parse(fs.readFileSync(credPath, "utf-8"));
-    const { GoogleAuth } = await import("google-auth-library");
-    const auth = new GoogleAuth({ credentials: creds, scopes: ["https://www.googleapis.com/auth/cloud-platform"] });
-    const token = await (await auth.getClient()).getAccessToken();
+    const token = await getGoogleAccessToken(["https://www.googleapis.com/auth/cloud-platform"]);
+    if (!token) return null;
 
     const project  = process.env.GCP_PROJECT_ID ?? "rarity-f316d";
     const location = process.env.GCP_LOCATION ?? "us-central1";
@@ -105,7 +142,7 @@ async function embedPatientText(text: string): Promise<number[] | null> {
 
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token.token}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ instances: [{ content: text.slice(0, 2048) }] }),
     });
     const data = await res.json();
@@ -303,12 +340,21 @@ interface AISummaryResult {
 async function generateAISummary(
   symptoms: SymptomWithHPO[],
   matches: FinalMatch[],
-  statedDisease: string | null
+  statedDisease: string | null,
+  lang = 'en'
 ): Promise<AISummaryResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || !matches.length) {
     return { ai_summary: "Unable to generate summary.", diagnosis_match_type: "no_stated_disease", mismatch_reasoning: "" };
   }
+
+  const LANGUAGE_NAMES: Record<string, string> = {
+    en: 'English', hi: 'Hindi', ta: 'Tamil', mr: 'Marathi',
+    te: 'Telugu', bn: 'Bengali', kn: 'Kannada', gu: 'Gujarati',
+    pa: 'Punjabi', or: 'Odia',
+  };
+  const responseLang = LANGUAGE_NAMES[lang] ?? 'English';
+  const langInstruction = lang !== 'en' ? `\n\nIMPORTANT: Respond entirely in ${responseLang}. The JSON values must be in ${responseLang}.` : '';
 
   const topMatch = matches[0];
   const hpoCodes = topMatch.matched_hpo.slice(0, 8).map((h) => `${h.name} (${h.code})`).join(", ");
@@ -336,7 +382,7 @@ AI Reasoning: ${topMatch.reasoning}
 Generate a JSON object with:
 1. ai_summary: 3-4 sentence clinical narrative explaining why the AI identified this disease, referencing specific symptoms, HPO codes, and clinical codes. Write for a knowledgeable patient/caregiver.
 2. diagnosis_match_type: "matches" if stated disease is the same as AI top pick, "differs" if different, "no_stated_disease" if no stated disease
-3. mismatch_reasoning: if differs, explain specifically why the AI thinks differently (1-2 sentences referencing clinical evidence). If matches, write "The AI assessment aligns with the patient's reported diagnosis.". If no stated disease, write "No prior diagnosis was provided for comparison."
+3. mismatch_reasoning: if differs, explain specifically why the AI thinks differently (1-2 sentences referencing clinical evidence). If matches, write "The AI assessment aligns with the patient's reported diagnosis.". If no stated disease, write "No prior diagnosis was provided for comparison."${langInstruction}
 
 JSON only, no markdown:
 {"ai_summary":"...","diagnosis_match_type":"matches|differs|no_stated_disease","mismatch_reasoning":"..."}`;
@@ -401,17 +447,12 @@ async function runOCR(fileBuffer: Buffer, fileType: string): Promise<string> {
     return "";
   }
 
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (credentialsPath) {
+  const visionToken = await getGoogleAccessToken(["https://www.googleapis.com/auth/cloud-vision"]);
+  if (visionToken) {
     try {
-      const credPath = path.isAbsolute(credentialsPath) ? credentialsPath : path.join(process.cwd(), credentialsPath);
-      const creds = JSON.parse(fs.readFileSync(credPath, "utf-8"));
-      const { GoogleAuth } = await import("google-auth-library");
-      const auth = new GoogleAuth({ credentials: creds, scopes: ["https://www.googleapis.com/auth/cloud-vision"] });
-      const token = await (await auth.getClient()).getAccessToken();
       const vRes = await fetch("https://vision.googleapis.com/v1/images:annotate", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token.token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${visionToken}` },
         body: JSON.stringify({ requests: [{ image: { content: fileBuffer.toString("base64") }, features: [{ type: "DOCUMENT_TEXT_DETECTION" }] }] }),
       });
       const vText = (await vRes.json()).responses?.[0]?.fullTextAnnotation?.text ?? "";
@@ -541,6 +582,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File | null;
     const rawSymptoms = formData.get("symptoms") as string | null;
     const statedDisease = (formData.get("stated_disease") as string | null)?.trim() || null;
+    const lang = (formData.get("lang") as string | null) ?? 'en';
     let reportText = "";
 
     if (file) {
@@ -585,7 +627,7 @@ export async function POST(req: NextRequest) {
 
     // Step 6: Generate AI narrative summary + mismatch analysis
     const { ai_summary, diagnosis_match_type, mismatch_reasoning } =
-      await generateAISummary(symptoms, matches, statedDisease);
+      await generateAISummary(symptoms, matches, statedDisease, lang);
 
     return NextResponse.json({
       symptoms_extracted: symptoms.map((s) => s.term),
