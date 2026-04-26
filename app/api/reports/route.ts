@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       diagnosisMatchType,
       aiSummary,
       mismatchReasoning,
+      diagnosisChoice,
     } = body;
 
     if (!patientId) {
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
       allMatches: allMatches || [],
       statedDisease: statedDisease || null,
       diagnosisMatchType: diagnosisMatchType || "no_stated_disease",
+      diagnosisChoice: diagnosisChoice || null,
       aiSummary: aiSummary || "",
       mismatchReasoning: mismatchReasoning || "",
       createdAt: new Date().toISOString(),
@@ -92,11 +94,12 @@ export async function GET(req: NextRequest) {
     const snap = await db
       .collection("reports")
       .where("patientId", "==", patientId)
-      .orderBy("createdAt", "desc")
-      .limit(20)
       .get();
 
-    const reports = snap.docs.map((d) => d.data());
+    const reports = snap.docs
+      .map((d) => d.data())
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+      .slice(0, 20);
     return NextResponse.json({ reports });
   } catch (err: unknown) {
     console.error("[/api/reports GET]", err);

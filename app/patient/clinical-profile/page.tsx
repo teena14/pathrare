@@ -77,10 +77,15 @@ export default function ClinicalProfilePage() {
     const loadClinicalProfile = async () => {
       setLoading(true);
       try {
-        const [r, d] = await Promise.all([
-          fetch(`/api/reports?patientId=${profile.uid}`).then(x => x.json()),
-          fetch(`/api/documents?patientId=${profile.uid}`).then(x => x.json()),
+        const [reportsRes, documentsRes] = await Promise.all([
+          fetch(`/api/reports?patientId=${profile.uid}`, { cache: 'no-store' }),
+          fetch(`/api/documents?patientId=${profile.uid}`, { cache: 'no-store' }),
         ]);
+
+        const [r, d] = await Promise.all([reportsRes.json(), documentsRes.json()]);
+
+        if (!reportsRes.ok) throw new Error(r.error || 'Failed to load reports');
+        if (!documentsRes.ok) throw new Error(d.error || 'Failed to load documents');
 
         if (!cancelled) {
           setReports(r.reports || []);

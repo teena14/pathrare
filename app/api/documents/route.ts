@@ -42,11 +42,14 @@ export async function GET(req: NextRequest) {
     const db   = getAdminDb();
     const snap = await db.collection("documents")
       .where("patientId", "==", patientId)
-      .orderBy("uploadedAt", "desc")
-      .limit(50)
       .get();
 
-    return NextResponse.json({ documents: snap.docs.map(d => d.data()) });
+    const documents = snap.docs
+      .map(d => d.data())
+      .sort((a, b) => String(b.uploadedAt || "").localeCompare(String(a.uploadedAt || "")))
+      .slice(0, 50);
+
+    return NextResponse.json({ documents });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
