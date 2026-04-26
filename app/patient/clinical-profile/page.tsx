@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Calendar, Share2, Trash2, Plus, X, Copy, Download, AlertTriangle, CheckCircle, BookOpen, Sparkles, RefreshCw, Dna, SkipForward, Check } from 'lucide-react';
+import { FileText, Calendar, Share2, Trash2, Plus, X, Copy, Download, AlertTriangle, CheckCircle, Sparkles, RefreshCw, Dna, SkipForward, Check } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { uploadPatientDocument } from '@/lib/document-upload';
 import { useT } from '@/lib/use-t';
 
 interface AIReport {
@@ -68,20 +69,36 @@ export default function ClinicalProfilePage() {
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const docFileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { if (profile?.uid) { fetchAll(); } }, [profile]);
+  useEffect(() => {
+    if (!profile?.uid) return;
 
-  const fetchAll = async () => {
-    setLoading(true);
-    try {
-      const [r, d] = await Promise.all([
-        fetch(`/api/reports?patientId=${profile!.uid}`).then(x => x.json()),
-        fetch(`/api/documents?patientId=${profile!.uid}`).then(x => x.json()),
-      ]);
-      setReports(r.reports || []);
-      setDocs(d.documents || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
+    let cancelled = false;
+
+    const loadClinicalProfile = async () => {
+      setLoading(true);
+      try {
+        const [r, d] = await Promise.all([
+          fetch(`/api/reports?patientId=${profile.uid}`).then(x => x.json()),
+          fetch(`/api/documents?patientId=${profile.uid}`).then(x => x.json()),
+        ]);
+
+        if (!cancelled) {
+          setReports(r.reports || []);
+          setDocs(d.documents || []);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadClinicalProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.uid]);
 
   const deleteReport = async (id: string) => {
     if (!confirm('Delete this AI report?')) return;
@@ -89,15 +106,14 @@ export default function ClinicalProfilePage() {
     setReports(prev => prev.filter(r => r.id !== id));
   };
 
-  const deleteDoc = async (id: string, storagePath: string) => {
+  const deleteDoc = async (id: string) => {
     if (!confirm('Delete this document?')) return;
-    // Delete from Storage client-side
-    try {
-      const { storage } = await import('@/lib/firebase');
-      const { ref, deleteObject } = await import('firebase/storage');
-      if (storagePath) await deleteObject(ref(storage, storagePath));
-    } catch { /* storage may already be gone */ }
-    await fetch(`/api/documents/${id}?patientId=${profile!.uid}`, { method: 'DELETE' });
+    const res = await fetch(`/api/documents/${id}?patientId=${profile!.uid}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      alert('Delete failed: ' + (data?.error || 'Unknown error'));
+      return;
+    }
     setDocs(prev => prev.filter(d => d.id !== id));
   };
 
@@ -121,17 +137,8 @@ export default function ClinicalProfilePage() {
     if (!f || !profile?.uid) return;
     setUploadingDoc(true);
     try {
-      const { storage } = await import('@/lib/firebase');
-      const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-      const storagePath = `patients/${profile.uid}/documents/${Date.now()}_${f.name}`;
-      const snap = await uploadBytes(ref(storage, storagePath), f);
-      const storageUrl = await getDownloadURL(snap.ref);
-      const res = await fetch('/api/documents', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId: profile.uid, fileName: f.name, fileSize: f.size, fileType: f.type, storageUrl, storagePath }),
-      });
-      const d = await res.json();
-      setDocs(prev => [{ id: d.id, patientId: profile.uid!, fileName: f.name, fileSize: f.size, fileType: f.type, storageUrl, storagePath, uploadedAt: new Date().toISOString() }, ...prev]);
+      const document = await uploadPatientDocument(profile.uid, f);
+      setDocs(prev => [document, ...prev]);
     } catch (err) { alert('Upload failed: ' + String(err)); }
     finally { setUploadingDoc(false); if (docFileRef.current) docFileRef.current.value = ''; }
   };
@@ -336,7 +343,7 @@ export default function ClinicalProfilePage() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-100 text-dark-slate text-xs font-bold border border-surface-200 hover:bg-surface-200 transition-colors">
                   <Download className="w-3.5 h-3.5" /> Download
                 </a>
-                <button onClick={() => deleteDoc(doc.id, doc.storagePath)} className="p-2 rounded-xl hover:bg-rose-50 text-light-slate hover:text-rose-600 transition-colors">
+                <button onClick={() => deleteDoc(doc.id)} className="p-2 rounded-xl hover:bg-rose-50 text-light-slate hover:text-rose-600 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

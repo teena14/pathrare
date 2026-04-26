@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, Sparkles, AlertCircle, ChevronRight, X, Microscope, Download, BookOpen, CheckCircle, AlertTriangle, Edit3, RefreshCw, Check, SkipForward, Dna } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { uploadPatientDocument } from '@/lib/document-upload';
 import { useLang } from '@/lib/language-context';
 import { useT } from '@/lib/use-t';
 
@@ -172,24 +173,7 @@ export default function DiagnosePage() {
     try {
       // 1) If a file was uploaded, save it to Firebase Storage + Firestore documents
       if (file && mode === 'upload') {
-        const { storage } = await import('@/lib/firebase');
-        const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-        const storagePath = `patients/${profile.uid}/documents/${Date.now()}_${file.name}`;
-        const storageRef = ref(storage, storagePath);
-        const snap = await uploadBytes(storageRef, file);
-        const storageUrl = await getDownloadURL(snap.ref);
-        await fetch('/api/documents', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            patientId: profile.uid,
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            storageUrl,
-            storagePath,
-          }),
-        });
+        await uploadPatientDocument(profile.uid, file);
       }
 
       // 2) Save the AI diagnostic report

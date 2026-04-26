@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb, adminStorage } from "@/lib/firebase-admin";
 
 function getAdminDb() {
   return adminDb;
 }
 
 // ── DELETE /api/documents/[docId] ─────────────────────────────────────────────
-// Removes metadata from Firestore (client deletes from Storage separately)
+// Removes metadata from Firestore and deletes the stored file server-side
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ docId: string }> }
@@ -22,6 +22,15 @@ export async function DELETE(
 
     if (!doc.exists || doc.data()?.patientId !== patientId)
       return NextResponse.json({ error: "Not found or unauthorized" }, { status: 404 });
+
+    const storagePath = doc.data()?.storagePath;
+    if (storagePath) {
+      try {
+        await adminStorage.bucket().file(storagePath).delete();
+      } catch {
+        // If the file is already missing, still allow metadata cleanup.
+      }
+    }
 
     await ref.delete();
     return NextResponse.json({ success: true });
