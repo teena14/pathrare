@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, adminStorage } from "@/lib/firebase-admin";
+import { adminDb, adminStorage, getAdminStorageBucketCandidates } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 
@@ -18,6 +18,10 @@ function sanitizeFileName(fileName: string) {
 
 function buildDownloadUrl(bucketName: string, storagePath: string, token: string) {
   return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(storagePath)}?alt=media&token=${token}`;
+}
+
+function isMissingBucketError(error: unknown) {
+  return String(error).toLowerCase().includes("specified bucket does not exist");
 }
 
 export async function POST(req: NextRequest) {
@@ -38,8 +42,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
     }
 
-    const bucket = adminStorage.bucket();
-    if (!bucket.name) {
+    const bucketCandidates = getAdminStorageBucketCandidates();
+    if (bucketCandidates.length === 0) {
       return NextResponse.json(
         { error: "Firebase Storage bucket is not configured on the server" },
         { status: 500 }
@@ -50,18 +54,38 @@ export async function POST(req: NextRequest) {
     const storagePath = `patients/${patientId}/documents/${Date.now()}_${safeFileName}`;
     const contentType = file.type || "application/octet-stream";
     const downloadToken = randomUUID();
-    const storageFile = bucket.file(storagePath);
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    await storageFile.save(Buffer.from(await file.arrayBuffer()), {
-      resumable: false,
-      contentType,
-      metadata: {
-        contentType,
-        metadata: {
-          firebaseStorageDownloadTokens: downloadToken,
-        },
-      },
-    });
+    let resolvedBucketName = "";
+    let lastBucketError: unknown;
+
+    for (const bucketName of bucketCandidates) {
+      try {
+        await adminStorage.bucket(bucketName).file(storagePath).save(fileBuffer, {
+          resumable: false,
+          contentType,
+          metadata: {
+            contentType,
+            metadata: {
+              firebaseStorageDownloadTokens: downloadToken,
+            },
+          },
+        });
+        resolvedBucketName = bucketName;
+        break;
+      } catch (error) {
+        lastBucketError = error;
+        if (!isMissingBucketError(error)) {
+          throw error;
+        }
+      }
+    }
+
+    if (!resolvedBucketName) {
+      throw new Error(
+        `No Firebase Storage bucket found. Tried: ${bucketCandidates.join(", ")}. Last error: ${String(lastBucketError)}`
+      );
+    }
 
     const ref = adminDb.collection("documents").doc();
     const document = {
@@ -70,8 +94,9 @@ export async function POST(req: NextRequest) {
       fileName: safeFileName,
       fileSize: file.size,
       fileType: contentType,
+      storageBucket: resolvedBucketName,
       storagePath,
-      storageUrl: buildDownloadUrl(bucket.name, storagePath, downloadToken),
+      storageUrl: buildDownloadUrl(resolvedBucketName, storagePath, downloadToken),
       uploadedAt: new Date().toISOString(),
     };
 

@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, adminStorage } from "@/lib/firebase-admin";
+import { adminDb, adminStorage, getAdminStorageBucketCandidates } from "@/lib/firebase-admin";
 
 function getAdminDb() {
   return adminDb;
+}
+
+function parseBucketFromStorageUrl(storageUrl?: string) {
+  if (!storageUrl) return "";
+
+  const match = storageUrl.match(/\/b\/([^/]+)\//);
+  return match?.[1] || "";
 }
 
 // ── DELETE /api/documents/[docId] ─────────────────────────────────────────────
@@ -24,11 +31,19 @@ export async function DELETE(
       return NextResponse.json({ error: "Not found or unauthorized" }, { status: 404 });
 
     const storagePath = doc.data()?.storagePath;
+    const storageBucket = doc.data()?.storageBucket || parseBucketFromStorageUrl(doc.data()?.storageUrl);
     if (storagePath) {
-      try {
-        await adminStorage.bucket().file(storagePath).delete();
-      } catch {
-        // If the file is already missing, still allow metadata cleanup.
+      const bucketCandidates = Array.from(
+        new Set([storageBucket, ...getAdminStorageBucketCandidates()].filter(Boolean))
+      );
+
+      for (const bucketName of bucketCandidates) {
+        try {
+          await adminStorage.bucket(bucketName).file(storagePath).delete();
+          break;
+        } catch {
+          // If the file is missing or the bucket is invalid, continue cleanup.
+        }
       }
     }
 

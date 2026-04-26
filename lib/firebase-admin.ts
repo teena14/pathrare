@@ -18,6 +18,35 @@ function getAdminStorageBucket() {
   return process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 }
 
+function normalizeBucketName(bucketName?: string | null) {
+  return bucketName?.replace(/^gs:\/\//, '').trim() || '';
+}
+
+export function getAdminProjectId() {
+  return (
+    process.env.FIREBASE_ADMIN_PROJECT_ID ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    ''
+  ).trim();
+}
+
+export function getAdminStorageBucketCandidates() {
+  const configuredBucket = normalizeBucketName(process.env.FIREBASE_STORAGE_BUCKET);
+  const publicBucket = normalizeBucketName(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET);
+  const projectId = getAdminProjectId();
+
+  return Array.from(
+    new Set(
+      [
+        configuredBucket,
+        publicBucket,
+        projectId ? `${projectId}.firebasestorage.app` : '',
+        projectId ? `${projectId}.appspot.com` : '',
+      ].filter(Boolean)
+    )
+  );
+}
+
 const adminApp = getApps().length
   ? getApps()[0]
   : initializeApp({
