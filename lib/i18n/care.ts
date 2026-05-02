@@ -1,4 +1,4 @@
-import type { LangCode } from '@/lib/language-context';
+import type { LangCode } from '@/providers/language-provider';
 type T = Record<LangCode, string>;
 export const care: Record<string, T> = {
   title:          { en:'Care Assistant',       hi:'केयर असिस्टेंट',    ta:'பராமரிப்பு உதவியாளர்', mr:'केयर असिस्टंट',      te:'కేర్ అసిస్టెంట్',    bn:'কেয়ার অ্যাসিস্ট্যান্ট', kn:'ಕೇರ್ ಅಸಿಸ್ಟೆಂಟ್', gu:'કेर असिस्टन्ट',      pa:'ਕੇਅਰ ਅਸਿਸਟੈਂਟ',      or:'କେୟାର ଆସିଷ୍ଟାଣ୍ଟ' },

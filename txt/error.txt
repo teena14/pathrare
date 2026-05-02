@@ -46,3 +46,8 @@
 
 - UI NOTE: Reduced NGO dashboard screen blinking on 2026-04-24.
   CAUSE: The NGO dashboard provider set `loading = true` on every 10-second background refresh and also cleared visible data on refresh errors, causing cards and sections to flash. FIX: Background polling now refreshes silently after the initial load and preserves the last good data if a background request fails.
+
+- ERROR: Each child in a list should have a unique "key" prop. (React console error)
+  CAUSE: Older documents in the Firestore collection did not have the "id" field stored directly within their data payload, causing "doc.id" and "report.id" to evaluate to undefined when mapping items in the UI.
+  FIX: Updated GET /api/reports and /api/documents routes to explicitly include the document ID via "id: d.id" alongside "...d.data()!.
+

@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { HeartPulse, Mic, MicOff, Volume2, VolumeX, Loader2 } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { useLang } from "@/lib/language-context";
-import { useT } from "@/lib/use-t";
+import { useAuth } from '@/providers/auth-provider';
+import { useLang } from '@/providers/language-provider';
+import { useT } from '@/hooks/use-t';
 
 interface Source {
   title: string;

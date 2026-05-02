@@ -2,9 +2,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
-import { getAssociatedNgoIds, toAvailabilityLabel } from '@/lib/ngo-associations';
+import { useAuth } from '@/providers/auth-provider';
+import { db } from '@/services/firebase/firebase';
+import { getAssociatedNgoIds, toAvailabilityLabel } from '@/services/ngo/ngo-associations';
 
 export type AvailabilityStatus = 'Available' | 'Busy' | 'Offline';
 export type TaskStatus = 'Pending' | 'Assigned' | 'Active' | 'Completed' | 'Open';

@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ChevronRight, MessageSquareText, Landmark, GraduationCap, Stethoscope, Cpu } from 'lucide-react';
-import { canOpenTaskChat, dedupeSupportTasks, humanizeTaskStatus, mapSupportTask, SupportTask } from '@/lib/task-chat';
-import { useT } from '@/lib/use-t';
+import { canOpenTaskChat, dedupeSupportTasks, humanizeTaskStatus, mapSupportTask, SupportTask } from '@/services/tasks/task-chat';
+import { useT } from '@/hooks/use-t';
 
 const CATEGORIES = [
   { id: 'financial', label: 'Financial & Legal Aid', icon: Landmark, desc: 'Schemes, disability certificates, legal rights' },
@@ -25,7 +25,7 @@ export default function LifeAssistLandingPage() {
     const load = async (showLoading: boolean) => {
       try {
         if (showLoading) setLoading(true);
-        const { auth: firebaseAuth } = await import('@/lib/firebase');
+        const { auth: firebaseAuth } = await import('@/services/firebase/firebase');
         const userId = firebaseAuth.currentUser?.uid;
         if (!userId) {
           if (active) {

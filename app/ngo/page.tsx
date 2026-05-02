@@ -1,6 +1,6 @@
 'use client';
 
-import { NgoOverviewContent } from './overview-content';
+import { NgoOverviewContent } from '@/features/ngo/components/overview-content';
 
 export default function NGOPage() {
   return <NgoOverviewContent />;

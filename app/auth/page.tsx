@@ -14,8 +14,8 @@ import {
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import { useAuth } from '@/lib/auth-context';
+import { auth, db } from '@/services/firebase/firebase';
+import { useAuth } from '@/providers/auth-provider';
 
 const ROLES = [
   { id: 'patient', name: 'Patient', icon: User, desc: 'Find diagnosis & support.', color: 'from-blue-500 to-indigo-500' },

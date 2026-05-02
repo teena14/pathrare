@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AuthProvider } from "@/lib/auth-context";
-import { LanguageProvider } from "@/lib/language-context";
+import { AuthProvider } from '@/providers/auth-provider';
+import { LanguageProvider } from '@/providers/language-provider';
 
 export const metadata: Metadata = {
   title: "PathRare - Navigation for Rare Diseases",

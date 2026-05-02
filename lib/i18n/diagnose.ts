@@ -1,4 +1,4 @@
-import type { LangCode } from '@/lib/language-context';
+import type { LangCode } from '@/providers/language-provider';
 type T = Record<LangCode, string>;
 export const diagnose: Record<string, T> = {
   title:          { en:'Diagnostic Inference',  hi:'नैदानिक ​​अनुमान',  ta:'நோயறிதல் அனுமானம்', mr:'निदान अनुमान',       te:'డయాగ్నస్టిక్ ఇన్ఫరెన్స్', bn:'ডায়াগনস্টিক ইনফারেন্স', kn:'ರೋಗನಿರ್ಣಯ ಅನುಮಾನ', gu:'ডায়াগনস্টিক ইনফারেন্স', pa:'ਡਾਇਗਨੌਸਟਿਕ ਅਨੁਮਾਨ', or:'ଡାୟାଗ୍ନୋଷ୍ଟିକ ଅନୁମାନ' },

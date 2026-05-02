@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb } from '@/services/firebase/firebase-admin';
 
 function getAdminDb() {
   return adminDb;
@@ -45,8 +45,8 @@ export async function GET(req: NextRequest) {
       .get();
 
     const documents = snap.docs
-      .map(d => d.data())
-      .sort((a, b) => String(b.uploadedAt || "").localeCompare(String(a.uploadedAt || "")))
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a: any, b: any) => String(b.uploadedAt || "").localeCompare(String(a.uploadedAt || "")))
       .slice(0, 50);
 
     return NextResponse.json({ documents });

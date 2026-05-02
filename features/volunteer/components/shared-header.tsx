@@ -2,8 +2,8 @@
 
 import { CheckCircle2, MessageSquareText, ShieldCheck, UserRoundSearch, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/lib/auth-context';
-import { AvailabilityStatus, useVolunteerDashboard } from './volunteer-dashboard-context';
+import { useAuth } from '@/providers/auth-provider';
+import { AvailabilityStatus, useVolunteerDashboard } from '@/features/volunteer/context/volunteer-dashboard-context';
 
 export function VolunteerSharedHeader() {
   const {

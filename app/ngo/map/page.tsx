@@ -2,9 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import { Activity, BriefcaseMedical, FileText, HandCoins } from 'lucide-react';
-import { useNgoDashboard } from '../ngo-dashboard-context';
+import { useNgoDashboard } from '@/features/ngo/context/ngo-dashboard-context';
 
-const NgoHeatMap = dynamic(() => import('../NgoHeatMap'), { ssr: false });
+const NgoHeatMap = dynamic(() => import('@/features/ngo/components/NgoHeatMap'), { ssr: false });
 
 export default function NgoMapPage() {
   const {

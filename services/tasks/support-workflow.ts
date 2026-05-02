@@ -1,6 +1,6 @@
 import { FieldValue, Transaction } from 'firebase-admin/firestore';
-import { adminDb } from '@/lib/firebase-admin';
-import { getAssociatedNgoIds, getNgoIdentifiers, hasNgoAssociation, normalizeAvailability } from '@/lib/ngo-associations';
+import { adminDb } from '@/services/firebase/firebase-admin';
+import { getAssociatedNgoIds, getNgoIdentifiers, hasNgoAssociation, normalizeAvailability } from '@/services/ngo/ngo-associations';
 
 type FirestoreRecord = Record<string, unknown>;
 

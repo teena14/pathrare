@@ -21,8 +21,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { embedQuery, retrieveChunks, buildRagContext, isRagIndexAvailable } from "@/lib/rag";
-import { adminDb } from "@/lib/firebase-admin";
+import { embedQuery, retrieveChunks, buildRagContext, isRagIndexAvailable } from '@/services/ai/rag';
+import { adminDb } from '@/services/firebase/firebase-admin';
 
 const MEDICAL_DISCLAIMER =
   "This information is provided for educational purposes only from authoritative medical databases. It does not constitute medical advice. Always consult a qualified healthcare professional.";

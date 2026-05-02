@@ -1,13 +1,13 @@
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
-import { adminDb } from '@/lib/firebase-admin';
-import { getAssociatedNgoIds, normalizeAvailability } from '@/lib/ngo-associations';
+import { adminDb } from '@/services/firebase/firebase-admin';
+import { getAssociatedNgoIds, normalizeAvailability } from '@/services/ngo/ngo-associations';
 import {
   acceptRequestOwnership,
   assignNgoCandidate,
   createSupportWorkflow,
-} from '@/lib/support-workflow';
+} from '@/services/tasks/support-workflow';
 
 export const dynamic = 'force-dynamic';
 

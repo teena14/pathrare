@@ -2,9 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Calendar, Share2, Trash2, Plus, X, Copy, Download, AlertTriangle, CheckCircle, Sparkles, RefreshCw, Dna, SkipForward, Check } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
-import { uploadPatientDocument } from '@/lib/document-upload';
-import { useT } from '@/lib/use-t';
+import { useAuth } from '@/providers/auth-provider';
+import { uploadPatientDocument } from '@/services/documents/document-upload';
+import { useT } from '@/hooks/use-t';
 
 interface AIReport {
   id: string; patientId: string; fileName: string; createdAt: string;

@@ -9,7 +9,7 @@ import {
   signOut as firebaseSignOut
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth, db } from '@/services/firebase/firebase';
 
 interface UserProfile {
   uid: string;

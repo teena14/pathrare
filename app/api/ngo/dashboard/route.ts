@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { computeNgoPriorityScore } from '@/lib/support-workflow';
-import { getAssociatedNgoIds, getNgoIdentifiers, hasNgoAssociation, normalizeAvailability } from '@/lib/ngo-associations';
+import { adminDb } from '@/services/firebase/firebase-admin';
+import { computeNgoPriorityScore } from '@/services/tasks/support-workflow';
+import { getAssociatedNgoIds, getNgoIdentifiers, hasNgoAssociation, normalizeAvailability } from '@/services/ngo/ngo-associations';
 
 export const dynamic = 'force-dynamic';
 

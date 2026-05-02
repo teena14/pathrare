@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/services/firebase/firebase-admin';
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();

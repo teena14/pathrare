@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { getAssociatedNgoIds } from '@/lib/ngo-associations';
+import { adminDb } from '@/services/firebase/firebase-admin';
+import { getAssociatedNgoIds } from '@/services/ngo/ngo-associations';
 
 export const dynamic = 'force-dynamic';
 

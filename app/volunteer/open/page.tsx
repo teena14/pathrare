@@ -2,8 +2,8 @@
 
 import { UserRoundSearch } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { urgencyTone, useVolunteerDashboard } from '../volunteer-dashboard-context';
-import { VolunteerSharedHeader } from '../shared-header';
+import { urgencyTone, useVolunteerDashboard } from '@/features/volunteer/context/volunteer-dashboard-context';
+import { VolunteerSharedHeader } from '@/features/volunteer/components/shared-header';
 
 export default function VolunteerOpenTasksPage() {
   const {

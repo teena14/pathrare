@@ -8,7 +8,7 @@ import {
   statusTone,
   urgencyTone,
   useNgoDashboard,
-} from '../ngo-dashboard-context';
+} from '@/features/ngo/context/ngo-dashboard-context';
 
 export default function NgoCasesPage() {
   const {

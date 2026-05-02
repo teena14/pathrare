@@ -1,5 +1,5 @@
 'use client';
-import { useLang } from '@/lib/language-context';
+import { useLang } from '@/providers/language-provider';
 import { nav } from '@/lib/i18n/nav';
 import { dashboard } from '@/lib/i18n/dashboard';
 import { care } from '@/lib/i18n/care';

@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FileText, HeartHandshake, LayoutDashboard, LogOut, Map, Settings, TrendingUp, Users } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
-import { NgoDashboardProvider } from './ngo-dashboard-context';
+import { useAuth } from '@/providers/auth-provider';
+import { NgoDashboardProvider } from '@/features/ngo/context/ngo-dashboard-context';
 
 const NGO_TABS = [
   { href: '/ngo', label: 'Overview', icon: LayoutDashboard },

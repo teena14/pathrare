@@ -1,9 +1,9 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/lib/auth-context';
-import { getAssociatedNgoIds, toAvailabilityLabel } from '@/lib/ngo-associations';
-import type { HeatCluster } from './NgoHeatMap';
+import { useAuth } from '@/providers/auth-provider';
+import { getAssociatedNgoIds, toAvailabilityLabel } from '@/services/ngo/ngo-associations';
+import type { HeatCluster } from '@/features/ngo/components/NgoHeatMap';
 
 export type NeedType =
   | 'Medical Support'

@@ -2,9 +2,9 @@
 
 import { LockKeyhole, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { VolunteerNgoAssociationPanel } from './ngo-association-panel';
-import { statusTone, urgencyTone, useVolunteerDashboard } from './volunteer-dashboard-context';
-import { VolunteerSharedHeader } from './shared-header';
+import { VolunteerNgoAssociationPanel } from '@/features/volunteer/components/ngo-association-panel';
+import { statusTone, urgencyTone, useVolunteerDashboard } from '@/features/volunteer/context/volunteer-dashboard-context';
+import { VolunteerSharedHeader } from '@/features/volunteer/components/shared-header';
 
 export default function VolunteerPage() {
   const {

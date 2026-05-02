@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb } from '@/services/firebase/firebase-admin';
 
 // ── Firebase Admin init ────────────────────────────────────────────────────────
 function getAdminDb() {
@@ -97,8 +97,8 @@ export async function GET(req: NextRequest) {
       .get();
 
     const reports = snap.docs
-      .map((d) => d.data())
-      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a: any, b: any) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
       .slice(0, 20);
     return NextResponse.json({ reports });
   } catch (err: unknown) {

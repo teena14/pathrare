@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { CheckCircle2, UserRoundX, Users } from 'lucide-react';
-import { useNgoDashboard } from '../ngo-dashboard-context';
-import { compactPatientConnectionSummary } from '@/lib/ngo-support';
+import { useNgoDashboard } from '@/features/ngo/context/ngo-dashboard-context';
+import { compactPatientConnectionSummary } from '@/services/ngo/ngo-support';
 
 function formatRelativeTime(value?: string) {
   if (!value) return 'just now';

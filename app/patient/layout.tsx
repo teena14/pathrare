@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Activity, HeartHandshake, Users, HeartPulse, Microscope, LogOut, ArrowLeft, Settings } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@/providers/auth-provider';
 import { useEffect } from 'react';
-import LanguagePicker from '@/components/LanguagePicker';
-import { useT } from '@/lib/use-t';
+import LanguagePicker from '@/components/ui/LanguagePicker';
+import { useT } from '@/hooks/use-t';
 
 // ── 5 constant tabs — always shown ───────────────────────────────────────────
 const NAV = [

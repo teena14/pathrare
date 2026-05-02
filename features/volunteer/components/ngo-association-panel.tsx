@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Building2, MailPlus, Unlink } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
-import { useVolunteerDashboard } from './volunteer-dashboard-context';
+import { useAuth } from '@/providers/auth-provider';
+import { useVolunteerDashboard } from '@/features/volunteer/context/volunteer-dashboard-context';
 
 type NgoDirectoryItem = {
   id: string;

@@ -5,7 +5,7 @@
  * NEVER import this in client components — it reads from the filesystem.
  *
  * Usage:
- *   import { retrieveChunks, embedQuery, buildRagContext } from '@/lib/rag';
+ *   import { retrieveChunks, embedQuery, buildRagContext } from '@/services/ai/rag';
  *
  *   const queryVec = await embedQuery("What is Gaucher disease?");
  *   const chunks   = retrieveChunks(queryVec, 6);
@@ -45,7 +45,7 @@ let ragIndex: RagChunk[] | null = null;
 function loadRagIndex(): void {
   if (ragIndex !== null) return;
 
-  const indexPath = path.join(process.cwd(), "data", "rag", "rag_index.json");
+  const indexPath = path.join(process.cwd(), "data", '@/services/ai/rag', "rag_index.json");
   if (!fs.existsSync(indexPath)) {
     console.warn(
       "[RAG] rag_index.json not found — RAG retrieval disabled. Run scripts/embed_rag_chunks.py first."

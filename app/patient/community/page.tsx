@@ -8,8 +8,8 @@ import {
   Send, AlertCircle, X, Trash2
 } from 'lucide-react';
 
-import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
+import { useAuth } from '@/providers/auth-provider';
+import { db } from '@/services/firebase/firebase';
 import { 
   collection, query, orderBy, onSnapshot, addDoc, 
   doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, deleteDoc, getDoc, setDoc

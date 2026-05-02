@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { getNgoIdentifiers } from '@/lib/ngo-associations';
+import { adminDb } from '@/services/firebase/firebase-admin';
+import { getNgoIdentifiers } from '@/services/ngo/ngo-associations';
 import {
   asString,
   buildPatientConnectionSummary,
   getClinicalProfileLink,
   getPatientDisplayName,
   getPatientRegionLabel,
-} from '@/lib/ngo-support';
+} from '@/services/ngo/ngo-support';
 
 export const dynamic = 'force-dynamic';
 

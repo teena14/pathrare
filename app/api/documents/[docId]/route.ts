@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, adminStorage, getAdminStorageBucketCandidates } from "@/lib/firebase-admin";
+import { adminDb, adminStorage, getAdminStorageBucketCandidates } from '@/services/firebase/firebase-admin';
 
 function getAdminDb() {
   return adminDb;

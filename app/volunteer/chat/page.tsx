@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { ArrowLeft, BellRing, CircleDot, Clock3, LockKeyhole, MessageSquareText, Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { defaultPresenceParticipant } from '@/lib/task-chat';
-import { useTaskPresence } from '@/lib/use-task-presence';
-import { statusTone, useVolunteerDashboard } from '../volunteer-dashboard-context';
-import { VolunteerSharedHeader } from '../shared-header';
+import { defaultPresenceParticipant } from '@/services/tasks/task-chat';
+import { useTaskPresence } from '@/hooks/use-task-presence';
+import { statusTone, useVolunteerDashboard } from '@/features/volunteer/context/volunteer-dashboard-context';
+import { VolunteerSharedHeader } from '@/features/volunteer/components/shared-header';
 
 function presenceTone(isOnline: boolean) {
   return isOnline ? 'bg-emerald-500' : 'bg-slate-300';

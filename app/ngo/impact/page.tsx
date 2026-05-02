@@ -1,7 +1,7 @@
 'use client';
 
 import { FileText, Globe2, HandCoins } from 'lucide-react';
-import { useNgoDashboard } from '../ngo-dashboard-context';
+import { useNgoDashboard } from '@/features/ngo/context/ngo-dashboard-context';
 
 export default function NgoImpactPage() {
   const { categoryBreakdown, demandClusters, effectiveness, unmetNeeds } = useNgoDashboard();

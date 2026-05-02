@@ -13,10 +13,10 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
-import { useNgoDashboard } from './ngo-dashboard-context';
-import { compactPatientConnectionSummary } from '@/lib/ngo-support';
+import { useNgoDashboard } from '@/features/ngo/context/ngo-dashboard-context';
+import { compactPatientConnectionSummary } from '@/services/ngo/ngo-support';
 
-const NgoHeatMap = dynamic(() => import('./NgoHeatMap'), { ssr: false });
+const NgoHeatMap = dynamic(() => import('@/features/ngo/components/NgoHeatMap'), { ssr: false });
 
 function formatRelativeTime(value: string) {
   const date = new Date(value);

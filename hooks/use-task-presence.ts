@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { defaultPresenceSnapshot, TaskPresenceSnapshot } from './task-chat';
+import { defaultPresenceSnapshot, TaskPresenceSnapshot } from '@/services/tasks/task-chat';
 
 type PresenceRole = 'user' | 'volunteer';
 

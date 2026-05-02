@@ -6,8 +6,8 @@ import { motion } from 'framer-motion';
 import { doc, updateDoc } from 'firebase/firestore';
 import { AlertCircle } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
-import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
+import { useAuth } from '@/providers/auth-provider';
+import { db } from '@/services/firebase/firebase';
 
 type MultiSelectKey = 'focusAreas' | 'skills' | 'specializationTags';
 

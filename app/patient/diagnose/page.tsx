@@ -4,10 +4,10 @@ import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, Sparkles, AlertCircle, ChevronRight, X, Microscope, Download, BookOpen, CheckCircle, AlertTriangle, Edit3, RefreshCw, Check, SkipForward, Dna } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
-import { uploadPatientDocument } from '@/lib/document-upload';
-import { useLang } from '@/lib/language-context';
-import { useT } from '@/lib/use-t';
+import { useAuth } from '@/providers/auth-provider';
+import { uploadPatientDocument } from '@/services/documents/document-upload';
+import { useLang } from '@/providers/language-provider';
+import { useT } from '@/hooks/use-t';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface DiseaseMatch {

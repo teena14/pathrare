@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/services/firebase/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 

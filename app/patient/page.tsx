@@ -2,8 +2,8 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
-import { useT } from '@/lib/use-t';
+import { useAuth } from '@/providers/auth-provider';
+import { useT } from '@/hooks/use-t';
 
 // ── Animated visuals — design-system palette only (#0F5DE3, #23323D, #42596A) ─
 

@@ -5,8 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { CheckCircle, ChevronDown, ChevronRight, Clock, ExternalLink, Loader2, MessageSquareText } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
-import { canOpenTaskChat, dedupeSupportTasks, humanizeTaskStatus, mapSupportTask, SupportTask } from '@/lib/task-chat';
+import { useAuth } from '@/providers/auth-provider';
+import { canOpenTaskChat, dedupeSupportTasks, humanizeTaskStatus, mapSupportTask, SupportTask } from '@/services/tasks/task-chat';
 
 type ResourceCategory = 'financial' | 'education' | 'medical' | 'assistive';
 type Priority = 'urgent' | 'high' | 'medium';

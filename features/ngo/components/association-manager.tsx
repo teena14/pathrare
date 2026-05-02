@@ -3,8 +3,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { MailPlus, UserCheck, UserMinus } from 'lucide-react';
 import { useEffect } from 'react';
-import { useAuth } from '@/lib/auth-context';
-import { useNgoDashboard } from './ngo-dashboard-context';
+import { useAuth } from '@/providers/auth-provider';
+import { useNgoDashboard } from '@/features/ngo/context/ngo-dashboard-context';
 
 type InviteRecord = {
   id: string;

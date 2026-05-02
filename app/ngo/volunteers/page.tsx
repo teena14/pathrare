@@ -1,8 +1,8 @@
 'use client';
 
 import { Users } from 'lucide-react';
-import { NgoAssociationManager } from '../association-manager';
-import { availabilityTone, useNgoDashboard } from '../ngo-dashboard-context';
+import { NgoAssociationManager } from '@/features/ngo/components/association-manager';
+import { availabilityTone, useNgoDashboard } from '@/features/ngo/context/ngo-dashboard-context';
 
 export default function NgoVolunteersPage() {
   const { volunteers, loading, error } = useNgoDashboard();

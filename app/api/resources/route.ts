@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/services/firebase/firebase-admin';
 import {
   asString,
   asStringArray,
@@ -7,7 +7,7 @@ import {
   getNgoSpecializationTags,
   matchNgoToPatient,
   normalizeToken,
-} from '@/lib/ngo-support';
+} from '@/services/ngo/ngo-support';
 
 export const dynamic = 'force-dynamic';
 

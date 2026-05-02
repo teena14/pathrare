@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useLang, LANGUAGES, LangCode } from '@/lib/language-context';
+import { useLang, LANGUAGES, LangCode } from '@/providers/language-provider';
 import { Globe } from 'lucide-react';
 
 export default function LanguagePicker() {

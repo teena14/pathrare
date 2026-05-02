@@ -1,4 +1,4 @@
-import type { LangCode } from '@/lib/language-context';
+import type { LangCode } from '@/providers/language-provider';
 type T = Record<LangCode, string>;
 
 export const nav: Record<string, T> = {

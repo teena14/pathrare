@@ -10,7 +10,7 @@ import {
   MessageSquareText,
   Send,
 } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth } from '@/providers/auth-provider';
 import {
   canOpenTaskChat,
   ChatMessage,
@@ -20,8 +20,8 @@ import {
   mapChatMessage,
   mapSupportTask,
   SupportTask,
-} from '@/lib/task-chat';
-import { useTaskPresence } from '@/lib/use-task-presence';
+} from '@/services/tasks/task-chat';
+import { useTaskPresence } from '@/hooks/use-task-presence';
 
 function presenceTone(isOnline: boolean) {
   return isOnline ? 'bg-emerald-500' : 'bg-slate-300';

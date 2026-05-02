@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, ListTodo, LogOut, MessageSquareText, Settings, ShieldCheck } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
-import { VolunteerDashboardProvider } from './volunteer-dashboard-context';
+import { useAuth } from '@/providers/auth-provider';
+import { VolunteerDashboardProvider } from '@/features/volunteer/context/volunteer-dashboard-context';
 
 const VOLUNTEER_TABS = [
   { href: '/volunteer', label: 'Assigned Tasks', icon: LayoutDashboard },
