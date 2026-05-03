@@ -3,8 +3,10 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Calendar, Share2, Trash2, Plus, X, Copy, Download, AlertTriangle, CheckCircle, Sparkles, RefreshCw, Dna, SkipForward, Check } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
+import { useLang } from '@/providers/language-provider';
 import { uploadPatientDocument } from '@/services/documents/document-upload';
-import { useT } from '@/hooks/use-t';
+import { useTranslation } from 'react-i18next';
+import { translateBatch } from '@/lib/translateDynamic';
 
 interface AIReport {
   id: string; patientId: string; fileName: string; createdAt: string;
@@ -59,7 +61,8 @@ ${topHPO ? `<h2>HPO Evidence — ${top?.name}</h2><ul style="font-size:14px;line
 
 export default function ClinicalProfilePage() {
   const { profile } = useAuth();
-  const t = useT('clinicalProfile');
+  const { t } = useTranslation();
+  const { lang } = useLang();
   const [tab, setTab] = useState<'reports' | 'documents'>('reports');
   const [reports, setReports] = useState<AIReport[]>([]);
   const [docs, setDocs] = useState<MedDoc[]>([]);
@@ -88,6 +91,22 @@ export default function ClinicalProfilePage() {
         if (!documentsRes.ok) throw new Error(d.error || 'Failed to load documents');
 
         if (!cancelled) {
+          if (lang !== 'en' && r.reports?.length > 0) {
+            const textsToTranslate: string[] = [];
+            r.reports.forEach((rep: AIReport) => {
+              if (rep.aiSummary) textsToTranslate.push(rep.aiSummary);
+              if (rep.mismatchReasoning) textsToTranslate.push(rep.mismatchReasoning);
+            });
+            if (textsToTranslate.length > 0) {
+              const translated = await translateBatch(textsToTranslate, lang);
+              let idx = 0;
+              r.reports.forEach((rep: AIReport) => {
+                if (rep.aiSummary) rep.aiSummary = translated[idx++] || rep.aiSummary;
+                if (rep.mismatchReasoning) rep.mismatchReasoning = translated[idx++] || rep.mismatchReasoning;
+              });
+            }
+          }
+
           setReports(r.reports || []);
           setDocs(d.documents || []);
         }
@@ -103,7 +122,7 @@ export default function ClinicalProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.uid]);
+  }, [profile?.uid, lang]);
 
   const deleteReport = async (id: string) => {
     if (!confirm('Delete this AI report?')) return;
@@ -163,12 +182,12 @@ export default function ClinicalProfilePage() {
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-2xl bg-primary-blue/10"><FileText className="w-7 h-7 text-primary-blue" /></div>
           <div>
-            <h1 className="text-3xl font-black text-dark-slate">{t('title')}</h1>
+            <h1 className="text-3xl font-black text-dark-slate">{t('clinical_profile.title')}</h1>
             <p className="text-light-slate font-medium mt-0.5">{profile?.displayName || 'Patient'} — {reports.length} AI reports · {docs.length} documents</p>
           </div>
         </div>
         <button onClick={generateShare} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-blue text-white font-bold hover:bg-blue-700 transition-colors text-sm">
-          <Share2 className="w-4 h-4" /> {t('shareProfile')}
+          <Share2 className="w-4 h-4" /> {t('clinical_profile.shareProfile')}
         </button>
       </div>
 
@@ -178,15 +197,15 @@ export default function ClinicalProfilePage() {
           <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="bg-white rounded-3xl border border-surface-200 p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-dark-slate">Share with Doctor / Caregiver</h3>
+              <h3 className="font-bold text-dark-slate">{t('clinical_profile.shareModalTitle')}</h3>
               <button onClick={() => setShareUrl(null)}><X className="w-5 h-5 text-light-slate hover:text-dark-slate" /></button>
             </div>
-            <p className="text-xs text-light-slate mb-3">This link gives read-only access to your clinical profile for 30 days.</p>
+            <p className="text-xs text-light-slate mb-3">{t('clinical_profile.shareModalDesc')}</p>
             <div className="flex gap-2">
               <input readOnly value={shareUrl} className="flex-1 px-4 py-2.5 rounded-xl bg-surface-50 border border-surface-200 text-sm font-medium text-dark-slate" />
               <button onClick={() => { navigator.clipboard.writeText(shareUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary-blue text-white font-bold text-sm hover:bg-blue-700 transition-colors">
-                {copied ? <><CheckCircle className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy</>}
+                {copied ? <><CheckCircle className="w-4 h-4" /> {t('clinical_profile.copied')}</> : <><Copy className="w-4 h-4" /> {t('clinical_profile.copyLink')}</>}
               </button>
             </div>
           </motion.div>
@@ -198,7 +217,7 @@ export default function ClinicalProfilePage() {
         {(['reports', 'documents'] as const).map(tabKey => (
           <button key={tabKey} onClick={() => setTab(tabKey)}
             className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${tab === tabKey ? 'bg-white text-dark-slate shadow-sm' : 'text-light-slate hover:text-dark-slate'}`}>
-            {tabKey === 'reports' ? <span className="flex items-center gap-2"><Dna className="w-4 h-4" /> {t('tabDiagnoses')} ({reports.length})</span> : <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> {t('tabDocuments')} ({docs.length})</span>}
+            {tabKey === 'reports' ? <span className="flex items-center gap-2"><Dna className="w-4 h-4" /> {t('clinical_profile.tabDiagnoses')} ({reports.length})</span> : <span className="flex items-center gap-2"><FileText className="w-4 h-4" /> {t('clinical_profile.tabDocuments')} ({docs.length})</span>}
           </button>
         ))}
       </div>
@@ -209,10 +228,10 @@ export default function ClinicalProfilePage() {
           {reports.length === 0 ? (
             <div className="bg-white rounded-3xl border border-surface-200 p-12 text-center">
               <Sparkles className="w-12 h-12 text-surface-300 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-dark-slate mb-2">{t('noDiagnoses')}</h3>
-              <p className="text-light-slate mb-6">Run the diagnostic engine to get your first AI-powered diagnosis.</p>
+              <h3 className="text-xl font-bold text-dark-slate mb-2">{t('clinical_profile.noDiagnoses')}</h3>
+              <p className="text-light-slate mb-6">{t('clinical_profile.runDiagnoseHint')}</p>
               <a href="/patient/diagnose" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-blue text-white font-bold hover:bg-blue-700 transition-colors">
-                <Plus className="w-4 h-4" /> {t('startDiagnosis')}
+                <Plus className="w-4 h-4" /> {t('clinical_profile.startDiagnosis')}
               </a>
             </div>
           ) : reports.map(report => {
@@ -225,10 +244,10 @@ export default function ClinicalProfilePage() {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-bold text-dark-slate">{report.fileName}</h3>
-                      {report.diagnosisMatchType === 'matches' && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Confirmed</span>}
-                      {showMismatch && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Mismatch</span>}
-                      {report.diagnosisChoice === 'keep' && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-surface-100 text-light-slate border border-surface-200">Kept Initial</span>}
-                      {report.diagnosisChoice === 'change' && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary-blue/10 text-primary-blue border border-primary-blue/20">Changed to AI</span>}
+                      {report.diagnosisMatchType === 'matches' && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">{t('clinical_profile.confirmed')}</span>}
+                      {showMismatch && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {t('clinical_profile.mismatch')}</span>}
+                      {report.diagnosisChoice === 'keep' && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-surface-100 text-light-slate border border-surface-200">{t('clinical_profile.keptInitial')}</span>}
+                      {report.diagnosisChoice === 'change' && <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary-blue/10 text-primary-blue border border-primary-blue/20">{t('clinical_profile.changedToAI')}</span>}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-light-slate"><Calendar className="w-3.5 h-3.5" />{fmtDate(report.createdAt)}</div>
                   </div>
@@ -248,13 +267,13 @@ export default function ClinicalProfilePage() {
                   <div className="bg-surface-50 rounded-2xl p-4 mb-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs font-bold text-light-slate mb-0.5">AI Diagnosis</p>
+                        <p className="text-xs font-bold text-light-slate mb-0.5">{t('clinical_profile.aiDiagnosisLabel')}</p>
                         <p className="font-bold text-dark-slate">{report.aiDiagnosis.name}</p>
-                        <p className="text-xs text-light-slate mt-0.5">ORPHA:{report.aiDiagnosis.orpha_code} · {report.aiDiagnosis.confidence}% confidence</p>
+                        <p className="text-xs text-light-slate mt-0.5">ORPHA:{report.aiDiagnosis.orpha_code} · {report.aiDiagnosis.confidence}% Confidence</p>
                       </div>
                       {report.statedDisease && report.diagnosisMatchType === 'differs' && (
                         <div className="text-right">
-                          <p className="text-xs font-bold text-light-slate mb-0.5">Stated Diagnosis</p>
+                          <p className="text-xs font-bold text-light-slate mb-0.5">{t('clinical_profile.statedDiagnosisLabel')}</p>
                           <p className="font-bold text-dark-slate text-sm">{report.statedDisease}</p>
                         </div>
                       )}
@@ -271,7 +290,7 @@ export default function ClinicalProfilePage() {
                 {/* AI Summary */}
                 {report.aiSummary && (
                   <div className="bg-gradient-to-br from-primary-blue/5 to-indigo-50 rounded-2xl p-4 mb-4 border border-primary-blue/10">
-                    <div className="flex items-center gap-1.5 mb-2"><Sparkles className="w-4 h-4 text-primary-blue" /><p className="text-xs font-bold text-primary-blue">AI Summary</p></div>
+                    <div className="flex items-center gap-1.5 mb-2"><Sparkles className="w-4 h-4 text-primary-blue" /><p className="text-xs font-bold text-primary-blue">{t('clinical_profile.aiSummaryLabel')}</p></div>
                     <p className="text-sm text-dark-slate leading-relaxed">{report.aiSummary}</p>
                   </div>
                 )}
@@ -279,14 +298,14 @@ export default function ClinicalProfilePage() {
                 {/* Mismatch Alert */}
                 {showMismatch && (
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
-                    <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-5 h-5 text-amber-600" /><p className="font-bold text-amber-800 text-sm">Potential Misdiagnosis Detected</p></div>
+                    <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-5 h-5 text-amber-600" /><p className="font-bold text-amber-800 text-sm">{t('clinical_profile.potentialMismatch')}</p></div>
                     {report.mismatchReasoning && <p className="text-xs text-amber-700 leading-relaxed mb-3">{report.mismatchReasoning}</p>}
-                    <p className="text-xs font-bold text-amber-700 mb-2">Update your diagnosis decision:</p>
+                    <p className="text-xs font-bold text-amber-700 mb-2">{t('clinical_profile.updateDecision')}</p>
                     <div className="grid grid-cols-3 gap-2">
                       {(['change', 'keep', 'skip'] as const).map(c => (
                         <button key={c} onClick={() => handleChoiceUpdate(report.id, c, report.aiDiagnosis?.name)}
                           className={`py-2 px-2 rounded-xl text-xs font-bold border-2 transition-all ${report.diagnosisChoice === c ? (c === 'change' ? 'bg-primary-blue text-white border-primary-blue' : c === 'keep' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-surface-500 text-white border-surface-500') : 'bg-white border-amber-200 text-amber-700 hover:border-amber-400'}`}>
-                          {c === 'change' ? <span className="flex items-center justify-center gap-1.5"><RefreshCw className="w-3.5 h-3.5"/> Change to AI</span> : c === 'keep' ? <span className="flex items-center justify-center gap-1.5"><Check className="w-3.5 h-3.5"/> Keep Initial</span> : <span className="flex items-center justify-center gap-1.5"><SkipForward className="w-3.5 h-3.5"/> Skip for Later</span>}
+                          {c === 'change' ? <span className="flex items-center justify-center gap-1.5"><RefreshCw className="w-3.5 h-3.5"/> {t('clinical_profile.changeToAI')}</span> : c === 'keep' ? <span className="flex items-center justify-center gap-1.5"><Check className="w-3.5 h-3.5"/> {t('clinical_profile.keepInitial')}</span> : <span className="flex items-center justify-center gap-1.5"><SkipForward className="w-3.5 h-3.5"/> {t('clinical_profile.skipForLater')}</span>}
                         </button>
                       ))}
                     </div>
@@ -314,22 +333,22 @@ export default function ClinicalProfilePage() {
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-primary-blue/10"><Plus className="w-5 h-5 text-primary-blue" /></div>
               <div>
-                <p className="font-bold text-dark-slate text-sm">{t('uploadDoc')}</p>
-                <p className="text-xs text-light-slate">PDF, images — stored securely in your profile</p>
+                <p className="font-bold text-dark-slate text-sm">{t('clinical_profile.uploadDoc')}</p>
+                <p className="text-xs text-light-slate">{t('clinical_profile.uploadHint')}</p>
               </div>
             </div>
             <input ref={docFileRef} type="file" accept=".pdf,image/*" className="hidden" onChange={handleDocUpload} />
             <button onClick={() => docFileRef.current?.click()} disabled={uploadingDoc}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-blue text-white font-bold text-sm hover:bg-blue-700 transition-colors disabled:opacity-60">
-              {uploadingDoc ? <><RefreshCw className="w-4 h-4 animate-spin" /> Uploading...</> : <><Plus className="w-4 h-4" /> Choose File</>}
+              {uploadingDoc ? <><RefreshCw className="w-4 h-4 animate-spin" /> {t('clinical_profile.uploading')}</> : <><Plus className="w-4 h-4" /> {t('clinical_profile.chooseFile')}</>}
             </button>
           </div>
 
           {docs.length === 0 ? (
             <div className="bg-white rounded-3xl border border-surface-200 p-12 text-center">
               <FileText className="w-12 h-12 text-surface-300 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-dark-slate mb-2">{t('noDocs')}</h3>
-              <p className="text-light-slate">Upload your medical reports, prescriptions, or test results.</p>
+              <h3 className="text-xl font-bold text-dark-slate mb-2">{t('clinical_profile.noDocs')}</h3>
+              <p className="text-light-slate">{t('clinical_profile.uploadDocsHint')}</p>
             </div>
           ) : docs.map(doc => (
             <motion.div key={doc.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
@@ -346,7 +365,7 @@ export default function ClinicalProfilePage() {
               <div className="flex items-center gap-2">
                 <a href={doc.storageUrl} target="_blank" rel="noreferrer"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-100 text-dark-slate text-xs font-bold border border-surface-200 hover:bg-surface-200 transition-colors">
-                  <Download className="w-3.5 h-3.5" /> Download
+                  <Download className="w-3.5 h-3.5" /> {t('clinical_profile.download')}
                 </a>
                 <button onClick={() => deleteDoc(doc.id)} className="p-2 rounded-xl hover:bg-rose-50 text-light-slate hover:text-rose-600 transition-colors">
                   <Trash2 className="w-4 h-4" />

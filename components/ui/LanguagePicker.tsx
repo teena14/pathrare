@@ -1,109 +1,98 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useLang, LANGUAGES, LangCode } from '@/providers/language-provider';
+import { useEffect, useRef, useState } from 'react';
 import { Globe } from 'lucide-react';
+import { useLang, LANGUAGES } from '@/providers/language-provider';
 
 export default function LanguagePicker() {
   const { lang, setLang } = useLang();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
+  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
+  const isRTL = lang === 'ar';
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={ref} className="relative" dir={isRTL ? 'rtl' : 'ltr'}>
       <button
-        id="lang-picker-btn"
+        id="language-picker-btn"
+        aria-label="Select language"
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        title="Change language"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 5,
-          padding: '4px 10px',
-          borderRadius: 999,
-          border: '1.5px solid #e2e8f0',
-          background: open ? '#f1f5f9' : '#fff',
-          cursor: 'pointer',
-          fontSize: 12,
-          fontWeight: 700,
-          color: '#475569',
-          transition: 'all 0.15s',
-        }}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-100 hover:bg-surface-200 border border-surface-200 text-sm font-bold text-dark-slate transition-all"
       >
-        <Globe size={14} />
-        <span>{current.native}</span>
+        <Globe className="w-4 h-4 text-primary-blue" />
+        <span className="hidden sm:inline">{current.flag} {current.native}</span>
+        <span className="sm:hidden">{current.flag}</span>
+        <svg className={`w-3.5 h-3.5 text-light-slate transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
 
       {open && (
         <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            right: 0,
-            zIndex: 999,
-            background: '#fff',
-            border: '1.5px solid #e2e8f0',
-            borderRadius: 16,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-            minWidth: 200,
-            overflow: 'hidden',
-            animation: 'langFadeIn 0.15s ease-out',
-          }}
+          role="listbox"
+          aria-label="Language options"
+          className="absolute top-full mt-2 right-0 z-50 w-56 bg-white rounded-2xl shadow-xl border border-surface-200 p-1.5 max-h-80 overflow-y-auto"
         >
-          <div style={{ padding: '8px 12px 4px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Choose Language
+          {/* Indian languages group */}
+          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-light-slate">
+            Indian Languages
           </div>
-          {LANGUAGES.map((l) => (
-            <button
-              key={l.code}
-              id={`lang-option-${l.code}`}
-              onClick={() => { setLang(l.code as LangCode); setOpen(false); }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                width: '100%',
-                padding: '9px 14px',
-                border: 'none',
-                background: lang === l.code ? '#eff6ff' : 'transparent',
-                cursor: 'pointer',
-                textAlign: 'left',
-                borderLeft: lang === l.code ? '3px solid #0F5DE3' : '3px solid transparent',
-                transition: 'all 0.1s',
-              }}
-              onMouseEnter={(e) => { if (lang !== l.code) (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}
-              onMouseLeave={(e) => { if (lang !== l.code) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-            >
-              <span style={{ fontSize: 18 }}>{l.flag}</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: lang === l.code ? '#0F5DE3' : '#1e293b' }}>{l.native}</div>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>{l.label}</div>
-              </div>
-              {lang === l.code && (
-                <span style={{ marginLeft: 'auto', fontSize: 16, color: '#0F5DE3' }}>✓</span>
-              )}
-            </button>
+          {LANGUAGES.filter((l) => ['en','hi','ta','mr','te','bn','kn','gu','pa','or'].includes(l.code)).map((l) => (
+            <LangOption key={l.code} lang={l} active={lang === l.code} onSelect={() => { setLang(l.code); setOpen(false); }} />
+          ))}
+
+          <div className="my-1 border-t border-surface-100" />
+
+          {/* Global languages group */}
+          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-light-slate">
+            Global Languages
+          </div>
+          {LANGUAGES.filter((l) => ['ar','fr','es','zh','de','pt'].includes(l.code)).map((l) => (
+            <LangOption key={l.code} lang={l} active={lang === l.code} onSelect={() => { setLang(l.code); setOpen(false); }} />
           ))}
         </div>
       )}
-
-      <style>{`
-        @keyframes langFadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
+  );
+}
+
+function LangOption({
+  lang,
+  active,
+  onSelect,
+}: {
+  lang: (typeof LANGUAGES)[0];
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      role="option"
+      aria-selected={active}
+      onClick={onSelect}
+      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${
+        active
+          ? 'bg-primary-blue text-white font-bold'
+          : 'text-dark-slate hover:bg-surface-50 font-medium'
+      }`}
+    >
+      <span className="text-base leading-none">{lang.flag}</span>
+      <span className="flex-1 text-start">{lang.native}</span>
+      {active && (
+        <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      )}
+    </button>
   );
 }

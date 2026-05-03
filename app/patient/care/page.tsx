@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { HeartPulse, Mic, MicOff, Volume2, VolumeX, Loader2 } from "lucide-react";
 import { useAuth } from '@/providers/auth-provider';
 import { useLang } from '@/providers/language-provider';
-import { useT } from '@/hooks/use-t';
+import { useTranslation } from 'react-i18next';
+import { translateText } from '@/lib/translateDynamic';
 
 interface Source {
   title: string;
@@ -22,16 +23,7 @@ interface Message {
   needsFollowUp?: boolean;
 }
 
-const SUGGESTED_QUESTIONS = [
-  "What are the key symptoms I should monitor for my condition?",
-  "What government schemes are available for rare disease patients in India?",
-  "What is enzyme replacement therapy and how does it work?",
-  "How do I obtain a disability certificate in India?",
-  "What should I do during an acute metabolic crisis?",
-  "What are the first aid steps for a seizure?",
-  "What specialists should I see for my disease?",
-  "What is Ayushman Bharat coverage for rare diseases?",
-];
+const SUGGESTED_QUESTIONS = Array.from({ length: 8 }, (_, i) => `care_ai.suggested_q_${i}`);
 
 const SOURCE_COLORS: Record<string, string> = {
   WHO: "#3b82f6",
@@ -68,7 +60,7 @@ function getSourceInitial(source: string): string {
 export default function CarePage() {
   const { profile } = useAuth();
   const { lang } = useLang();
-  const t = useT('care');
+  const { t } = useTranslation();
   const patientId = profile?.uid ?? null;
   const patientDisease = profile?.primaryDisease ?? null;
 
@@ -90,8 +82,9 @@ export default function CarePage() {
 
   // Build welcome message personalised to disease
   useEffect(() => {
+    let active = true;
     const disease = patientDisease;
-    const welcomeText = disease
+    const baseWelcomeText = disease
       ? `Hello! I'm your Care Assistant, personalised for **${disease}**.\n\nI'll answer all your questions with your condition in mind. I reference:\n• **Orphanet & OMIM** — rare disease-specific clinical data\n• **WHO & NIH** — international clinical guidelines\n• **CDC** — disease prevention and care protocols\n• **Red Cross** — first aid & emergency procedures\n• **India NHM, PM-JAY, RPWD Act** — government schemes & disability welfare\n\nFor anything not in my local database, I draw on my full medical training — so you'll always get a complete answer. I may ask follow-up questions to personalise my advice to you.\n\nWhat would you like to know today?`
       : `Hello! I'm your Care & Medical Knowledge Assistant.\n\nI'll give you thorough, evidence-based answers by referencing:\n• **Orphanet & OMIM** — rare disease databases\n• **WHO & NIH** — international clinical guidelines\n• **CDC** — disease prevention & care protocols\n• **Red Cross** — first aid & emergency procedures\n• **India NHM, PM-JAY, RPWD Act** — government health schemes\n\nWhen my local database doesn't cover a topic, I use my full medical training to give you a complete answer — I'll never leave you without information. I may ask follow-up questions to give you more personalised advice.\n\nWhat would you like to know?`;
 
@@ -99,12 +92,23 @@ export default function CarePage() {
       {
         id: "welcome",
         role: "assistant",
-        content: welcomeText,
+        content: baseWelcomeText,
         sources: [],
         timestamp: new Date(),
       },
     ]);
-  }, [patientDisease]);
+
+    if (lang !== 'en') {
+      translateText(baseWelcomeText, lang).then((translated) => {
+        if (!active) return;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === "welcome" ? { ...m, content: translated } : m))
+        );
+      });
+    }
+    
+    return () => { active = false; };
+  }, [patientDisease, lang]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -281,10 +285,10 @@ export default function CarePage() {
           <HeartPulse className="care-header-icon-svg" />
         </div>
         <div className="care-header-text">
-          <h1 className="care-title">{t('title')}</h1>
+          <h1 className="care-title">{t('care_ai.title')}</h1>
           <p className="care-subtitle">
             {patientDisease
-              ? `Personalised for: ${patientDisease} · WHO · NIH · CDC · Orphanet · OMIM · NHM India`
+              ? `${t('care_ai.personalizedFor')} ${patientDisease} · WHO · NIH · CDC · Orphanet · OMIM · NHM India`
               : "WHO · NIH · CDC · Orphanet · OMIM · Red Cross · NHM India"}
           </p>
         </div>
@@ -299,7 +303,7 @@ export default function CarePage() {
           <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-7v2h2v-2h-2zm0-8v6h2V7h-2z" fill="currentColor" />
         </svg>
         <p>
-          {t('disclaimer')}
+          {t('care_ai.disclaimer')}
         </p>
       </div>
 
@@ -346,7 +350,7 @@ export default function CarePage() {
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                     <path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
-                  Follow-up question — please reply below
+                  {t('care_ai.followUpBadge')}
                 </div>
               )}
 
@@ -361,7 +365,7 @@ export default function CarePage() {
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                       <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
-                    {msg.sources.length} source{msg.sources.length > 1 ? "s" : ""}
+                    {msg.sources.length} {msg.sources.length > 1 ? t('care_ai.sources') : t('care_ai.source')}
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
                       style={{ transform: expandedSources.has(msg.id) ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
                       <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -393,7 +397,7 @@ export default function CarePage() {
               {!msg.loading && msg.role === 'assistant' && msg.id !== 'welcome' && (
                 <button
                   onClick={() => speak(msg.id, msg.content)}
-                  title={speakingId === msg.id ? 'Stop reading' : 'Read aloud'}
+                  title={speakingId === msg.id ? t('care_ai.stopReading') : t('care_ai.readAloud')}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 4,
                     marginTop: 6, padding: '4px 10px', borderRadius: 20,
@@ -405,8 +409,8 @@ export default function CarePage() {
                   }}
                 >
                   {speakingId === msg.id
-                    ? <><VolumeX size={12} /> Stop</>
-                    : <><Volume2 size={12} /> Read aloud</>}
+                    ? <><VolumeX size={12} /> {t('care_ai.stopReading')}</>
+                    : <><Volume2 size={12} /> {t('care_ai.readAloud')}</>}
                 </button>
               )}
             </div>
@@ -427,12 +431,12 @@ export default function CarePage() {
       {showSuggestions && (
         <div className="care-suggestions">
           <p className="care-suggestions-label">
-            {patientDisease ? `${t('suggestLabel')} — ${patientDisease}` : t('suggestLabel')}
+            {patientDisease ? `${t('care_ai.suggestLabel')} — ${patientDisease}` : t('care_ai.suggestLabel')}
           </p>
           <div className="care-suggestions-grid">
-            {SUGGESTED_QUESTIONS.map((q, i) => (
-              <button key={i} id={`care-suggestion-${i}`} className="care-suggestion-btn" onClick={() => sendMessage(q)}>
-                {q}
+            {SUGGESTED_QUESTIONS.map((qKey, i) => (
+              <button key={i} id={`care-suggestion-${i}`} className="care-suggestion-btn" onClick={() => sendMessage(t(qKey))}>
+                {t(qKey)}
               </button>
             ))}
           </div>
@@ -451,8 +455,8 @@ export default function CarePage() {
             onKeyDown={handleKeyDown}
             placeholder={
               patientDisease
-                ? `${t('placeholder').replace('…', '')} — ${patientDisease}…`
-                : t('placeholder')
+                ? `${t('care_ai.placeholder').replace('…', '')} — ${patientDisease}…`
+                : t('care_ai.placeholder')
             }
             rows={1}
             disabled={loading}
@@ -462,8 +466,8 @@ export default function CarePage() {
             id="care-mic-btn"
             onClick={recording ? stopRecording : startRecording}
             disabled={transcribing || loading}
-            aria-label={recording ? 'Stop recording' : 'Start voice input'}
-            title={recording ? 'Click to stop and transcribe' : 'Click to speak'}
+            aria-label={recording ? t('care_ai.stop_recording') : t('care_ai.start_voice')}
+            title={recording ? t('care_ai.stop_recording') : t('care_ai.start_voice')}
             style={{
               flexShrink: 0,
               width: 40, height: 40,
@@ -500,7 +504,7 @@ export default function CarePage() {
             )}
           </button>
         </div>
-        <p className="care-input-hint">{t('hint')}</p>
+        <p className="care-input-hint">{t('care_ai.hint')}</p>
       </div>
 
       <style>{`

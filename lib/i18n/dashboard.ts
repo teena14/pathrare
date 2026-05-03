@@ -1,5 +1,5 @@
 import type { LangCode } from '@/providers/language-provider';
-type T = Record<LangCode, string>;
+type T = Partial<Record<LangCode, string>>;
 
 export const dashboard: Record<string, T> = {
   welcome:       { en:'Welcome,',    hi:'स्वागत है,',  ta:'வரவேற்கிறோம்,', mr:'स्वागत आहे,', te:'స్వాగతం,', bn:'স্বাগতম,', kn:'ಸ್ವಾಗತ,', gu:'સ્વાગત,', pa:'ਜੀ ਆਇਆਂ ਨੂੰ,', or:'ସ୍ୱାଗତ,' },

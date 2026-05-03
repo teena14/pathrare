@@ -7,8 +7,11 @@ import {
   HelpCircle, Share2, Heart, Award, ShieldCheck, ChevronRight,
   Send, AlertCircle, X, Trash2
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { translateBatch } from '@/lib/translateDynamic';
 
 import { useAuth } from '@/providers/auth-provider';
+import { useLang } from '@/providers/language-provider';
 import { db } from '@/services/firebase/firebase';
 import { 
   collection, query, orderBy, onSnapshot, addDoc, 
@@ -68,6 +71,8 @@ const initializeCirclesData: Circle[] = [
 
 export default function CommunityPage() {
   const { user, profile } = useAuth();
+  const { lang } = useLang();
+  const { t } = useTranslation();
   
   const [activeCircle, setActiveCircle] = useState<string | null>(null);
   
@@ -145,11 +150,31 @@ export default function CommunityPage() {
     const postsRef = collection(db, 'circles', activeCircle, 'posts');
     const q = query(postsRef, orderBy('createdAt', 'desc'));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const fetchedPosts: Post[] = [];
       snapshot.forEach((doc) => {
         fetchedPosts.push({ id: doc.id, ...doc.data() } as Post);
       });
+
+      if (lang !== 'en') {
+        const textsToTranslate: string[] = [];
+        fetchedPosts.forEach(p => {
+          textsToTranslate.push(p.content);
+          p.replies.forEach(r => textsToTranslate.push(r.content));
+        });
+
+        if (textsToTranslate.length > 0) {
+          const translatedTexts = await translateBatch(textsToTranslate, lang);
+          let idx = 0;
+          fetchedPosts.forEach(p => {
+            p.content = translatedTexts[idx++] || p.content;
+            p.replies.forEach(r => {
+              r.content = translatedTexts[idx++] || r.content;
+            });
+          });
+        }
+      }
+
       setPosts(fetchedPosts);
       setLoadingPosts(false);
     }, (error) => {
@@ -158,7 +183,7 @@ export default function CommunityPage() {
     });
 
     return () => unsubscribe();
-  }, [activeCircle]);
+  }, [activeCircle, lang]);
 
 
   // Smart Detection Logic (Mock)
@@ -314,7 +339,12 @@ export default function CommunityPage() {
     }
   };
 
-  if (loadingCircles) return <div className="text-center py-20">Loading communities...</div>;
+  const circleMap: Record<string, string> = {
+    c1: 'circle_swelling', c2: 'circle_parents', c3: 'circle_pain',
+    c4: 'circle_surgery', c5: 'circle_neuro', c6: 'circle_adult',
+  };
+
+  if (loadingCircles) return <div className="text-center py-20">{t('community.loadingCommunities')}</div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 relative">
@@ -322,12 +352,12 @@ export default function CommunityPage() {
       {/* Header */}
       <div className="mb-8 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-black text-dark-slate mb-2">Community Intelligence</h1>
-          <p className="text-light-slate">Connect with families navigating similar clinical markers and life stages.</p>
+          <h1 className="text-3xl font-black text-dark-slate mb-2">{t('community.title')}</h1>
+          <p className="text-light-slate">{t('community.subtitle')}</p>
         </div>
         {!user && (
           <div className="text-sm bg-blue-50 text-blue-800 px-4 py-2 rounded-lg font-medium">
-            Read-only mode. Sign in to post and interact.
+            {t('community.readOnlyMode')}
           </div>
         )}
       </div>
@@ -338,12 +368,12 @@ export default function CommunityPage() {
         <div className="lg:col-span-1 space-y-4">
           <div className="glass p-5 rounded-2xl">
             <h2 className="text-sm font-bold text-light-slate uppercase tracking-wider mb-4 flex items-center">
-              <Users className="w-4 h-4 mr-2" /> My Circles
+              <Users className="w-4 h-4 mr-2" /> {t('community.myCircles')}
             </h2>
             <div className="space-y-3">
               {myCircles.length === 0 ? (
                 <div className="text-xs text-light-slate p-3 bg-surface-50 rounded-xl italic">
-                  You haven't joined any circles yet.
+                  {t('community.noCirclesYet')}
                 </div>
               ) : (
                 myCircles.map(circle => (
@@ -357,10 +387,10 @@ export default function CommunityPage() {
                     }`}
                   >
                     <p className={`font-semibold text-sm ${activeCircle === circle.id ? 'text-white' : 'text-dark-slate'}`}>
-                      {circle.name}
+                      {circleMap[circle.id] ? t(`community.${circleMap[circle.id]}_name`) : circle.name}
                     </p>
                     <p className={`text-xs mt-1 ${activeCircle === circle.id ? 'text-blue-100' : 'text-light-slate'}`}>
-                      {circle.members?.length || 0} members
+                      {circle.members?.length || 0} {t('community.members')}
                     </p>
                   </button>
                 ))
@@ -369,7 +399,7 @@ export default function CommunityPage() {
             <button 
                 onClick={() => setIsExploreModalOpen(true)}
                 className="w-full mt-4 py-2 text-sm text-primary-blue font-semibold hover:bg-surface-50 rounded-xl transition-colors flex items-center justify-center">
-              <Search className="w-4 h-4 mr-2"/> Explore More
+              <Search className="w-4 h-4 mr-2"/> {t('community.exploreMore')}
             </button>
           </div>
         </div>
@@ -380,13 +410,13 @@ export default function CommunityPage() {
           {/* Create Post Widget */}
           <div className={`glass p-5 rounded-2xl relative overflow-hidden transition ${!user || !activeCircle ? 'opacity-50 pointer-events-none' : ''}`}>
             <h3 className="font-bold text-dark-slate mb-3 flex items-center">
-              <MessageSquare className="w-4 h-4 mr-2 text-primary-blue"/> Share with this Circle
+              <MessageSquare className="w-4 h-4 mr-2 text-primary-blue"/> {t('community.shareWithCircle')}
             </h3>
             
             <textarea
               className="w-full border border-surface-200 rounded-xl p-3 focus:ring-2 focus:ring-primary-blue focus:border-transparent outline-none resize-none text-sm"
               rows={3}
-              placeholder={user ? (activeCircle ? "Share an experience, ask a question, or provide an insight..." : "Select a circle to post...") : "Please log in to post..."}
+              placeholder={user ? (activeCircle ? t('community.placeholder_logged_in') : t('community.placeholder_select_circle')) : t('community.placeholder_login')}
               value={newPostContent}
               onChange={(e) => setNewPostContent(e.target.value)}
               disabled={!user || !activeCircle}
@@ -403,9 +433,9 @@ export default function CommunityPage() {
                 >
                     <HelpCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
                     <div>
-                        <span className="font-semibold block">This might have been answered before.</span>
-                        Review similar past discussions before posting to get immediate answers.
-                        <button className="text-yellow-600 underline ml-2 font-medium">View Similar Posts</button>
+                        <span className="font-semibold block">{t('community.duplicateTitle')}</span>
+                        {t('community.duplicateDesc')}
+                        <button className="text-yellow-600 underline mx-2 font-medium">{t('community.viewSimilar')}</button>
                     </div>
                 </motion.div>
                 )}
@@ -422,14 +452,14 @@ export default function CommunityPage() {
                 >
                     <AlertTriangle className="w-5 h-5 mr-3 mt-0.5 text-red-600 flex-shrink-0" />
                     <div>
-                        <span className="font-bold text-red-700 block mb-1">Potential Medical Emergency Detected</span>
-                        We noticed keywords like "bleeding won't stop". The community cannot provide emergency medical advice.
+                        <span className="font-bold text-red-700 block mb-1">{t('community.emergencyTitle')}</span>
+                        {t('community.emergencyDesc')}
                         <div className="mt-3 flex space-x-3">
                             <button className="bg-red-600 text-white px-4 py-1.5 rounded-lg font-semibold hover:bg-red-700 transition">
-                                Contact Care Team
+                                {t('community.contactCareTeam')}
                             </button>
                             <button className="underline text-red-600 font-medium">
-                                Emergency Protocols
+                                {t('community.emergencyProtocols')}
                             </button>
                         </div>
                     </div>
@@ -450,7 +480,7 @@ export default function CommunityPage() {
                         : 'bg-surface-50 text-light-slate border-surface-200 hover:bg-surface-100'
                     }`}
                   >
-                    {type}
+                    {t(`community.postType_${type.replace(' ', '')}`)}
                   </button>
                 ))}
               </div>
@@ -459,7 +489,7 @@ export default function CommunityPage() {
                 disabled={!newPostContent.trim() || showCrisisAlert || !user || !activeCircle}
                 className="bg-primary-blue text-white px-4 py-1.5 rounded-xl text-sm font-bold flex items-center hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Post <Send className="w-3 h-3 ml-2"/>
+                {t('community.post')} <Send className="w-3 h-3 mx-2"/>
               </button>
             </div>
           </div>
@@ -468,13 +498,13 @@ export default function CommunityPage() {
           <div className="space-y-4">
             {!activeCircle ? (
               <div className="text-center py-10 text-light-slate glass rounded-2xl">
-                 Join a circle from "Explore More" to view and share discussions!
+                 {t('community.joinCircleToView')}
               </div>
             ) : loadingPosts ? (
-                <div className="text-center py-10 text-light-slate">Loading discussions...</div>
+                <div className="text-center py-10 text-light-slate">{t('community.loadingDiscussions')}</div>
             ) : posts.length === 0 ? (
               <div className="text-center py-10 text-light-slate glass rounded-2xl">
-                 No discussions here yet. Be the first to share!
+                 {t('community.noDiscussions')}
               </div>
             ) : (
                 posts.map(post => {
@@ -493,7 +523,7 @@ export default function CommunityPage() {
                                     <span className="font-bold text-dark-slate">{post.authorName}</span>
                                     {post.isVerified && <ShieldCheck className="w-4 h-4 text-pacific-blue" />}
                                     {post.authorUid === user?.uid && (
-                                      <span className="text-[10px] bg-surface-200 text-light-slate px-2 py-0.5 rounded ml-2">You</span>
+                                      <span className="text-[10px] bg-surface-200 text-light-slate px-2 py-0.5 rounded mx-2">{t('community.you')}</span>
                                     )}
                                 </div>
                                 
@@ -509,7 +539,7 @@ export default function CommunityPage() {
                                 )}
                             </div>
                             <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${getBadgeColor(post.type)}`}>
-                                {post.type}
+                                {t(`community.postType_${post.type.replace(' ', '')}`)}
                             </span>
                         </div>
 
@@ -535,11 +565,11 @@ export default function CommunityPage() {
                                       onClick={() => handleLikeToggle(post)} 
                                       className={`flex items-center transition-colors font-semibold ${hasLiked ? 'text-red-500' : 'hover:text-primary-blue'}`}
                                     >
-                                      <Heart className={`w-4 h-4 mr-1.5 ${hasLiked ? 'fill-red-500' : ''}`} /> 
+                                      <Heart className={`w-4 h-4 mx-1.5 ${hasLiked ? 'fill-red-500' : ''}`} /> 
                                       {post.likes?.length || 0}
                                     </button>
                                     <button onClick={() => toggleReplies(post.id)} className="flex items-center hover:text-primary-blue transition-colors font-semibold">
-                                      <MessageSquare className="w-4 h-4 mr-1.5" /> {post.replies?.length || 0} Replies
+                                      <MessageSquare className="w-4 h-4 mx-1.5" /> {post.replies?.length || 0} {t('community.replies')}
                                     </button>
                                 </div>
                                 <span>{post.timestamp}</span>
@@ -560,7 +590,7 @@ export default function CommunityPage() {
                                                     <div className="flex justify-between items-center mb-1">
                                                         <span className="font-bold text-xs text-dark-slate">
                                                           {reply.authorName}
-                                                          {reply.authorUid === user?.uid && <span className="font-normal text-light-slate ml-1">(You)</span>}
+                                                          {reply.authorUid === user?.uid && <span className="font-normal text-light-slate mx-1">({t('community.you')})</span>}
                                                         </span>
                                                         <span className="text-[10px] text-light-slate">{reply.timestamp}</span>
                                                     </div>
@@ -586,7 +616,7 @@ export default function CommunityPage() {
                                                       type="text" 
                                                       value={replyText[post.id] || ''}
                                                       onChange={(e) => setReplyText({ ...replyText, [post.id]: e.target.value })}
-                                                      placeholder="Write a reply..."
+                                                      placeholder={t('community.writeReply')}
                                                       className="flex-1 text-sm bg-white border border-surface-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-blue"
                                                   />
                                                   <button 
@@ -594,11 +624,11 @@ export default function CommunityPage() {
                                                       disabled={!replyText[post.id]?.trim()}
                                                       className="bg-primary-blue text-white px-3 py-1.5 rounded-lg text-sm font-bold disabled:opacity-50"
                                                   >
-                                                      Reply
+                                                      {t('community.reply')}
                                                   </button>
                                               </div>
                                             ) : (
-                                              <div className="text-xs text-light-slate italic mt-2">Sign in to reply.</div>
+                                              <div className="text-xs text-light-slate italic mt-2">{t('community.signInToReply')}</div>
                                             )}
                                         </div>
                                     </motion.div>
@@ -615,13 +645,13 @@ export default function CommunityPage() {
         {/* RIGHT SIDEBAR: Highlights & Guidelines */}
         <div className="lg:col-span-1 space-y-4">
           <div className="glass p-5 rounded-2xl">
-            <h3 className="text-sm font-bold border-b border-surface-200 pb-2 mb-3 text-dark-slate">Important Notice</h3>
+            <h3 className="text-sm font-bold border-b border-surface-200 pb-2 mb-3 text-dark-slate">{t('community.importantNotice')}</h3>
             <p className="text-xs text-light-slate mb-3 leading-relaxed">
-              This structured network helps connect similar experiences. <strong className="text-dark-slate">Always consult a professional</strong> before changing care routines based on peer advice.
+              {t('community.guideline')} <strong className="text-dark-slate">{t('community.consultProfessional')}</strong> {t('community.beforeChanging')}
             </p>
             <div className="bg-red-50 text-red-800 rounded-lg p-3 text-xs flex items-start">
               <AlertTriangle className="w-4 h-4 mr-2 flex-shrink-0 mt-0.5" />
-              <span>In severe distress, contact your lead physician or emergency services immediately.</span>
+              <span>{t('community.severeDistress')}</span>
             </div>
           </div>
         </div>
@@ -640,8 +670,8 @@ export default function CommunityPage() {
                 >
                     <div className="flex justify-between items-center mb-6">
                         <div>
-                            <h2 className="text-2xl font-black text-dark-slate">Explore Communities</h2>
-                            <p className="text-sm text-light-slate mt-1">Discover structured circles based on clinical markers.</p>
+                            <h2 className="text-2xl font-black text-dark-slate">{t('community.exploreCommunities')}</h2>
+                            <p className="text-sm text-light-slate mt-1">{t('community.discoverStructured')}</p>
                         </div>
                         <button onClick={() => setIsExploreModalOpen(false)} className="p-2 hover:bg-surface-100 rounded-full transition text-light-slate">
                             <X className="w-5 h-5" />
@@ -654,16 +684,16 @@ export default function CommunityPage() {
                             return (
                                 <div key={circle.id} className="border border-surface-200 rounded-xl p-4 flex flex-col justify-between hover:border-blue-200 transition">
                                     <div>
-                                        <h3 className="font-bold text-dark-slate text-sm mb-1">{circle.name}</h3>
-                                        <p className="text-xs text-light-slate mb-3">{circle.description}</p>
-                                        <span className="text-xs font-semibold text-primary-blue bg-blue-50 px-2 py-1 rounded-md">{circle.members?.length || 0} members</span>
+                                        <h3 className="font-bold text-dark-slate text-sm mb-1">{circleMap[circle.id] ? t(`community.${circleMap[circle.id]}_name`) : circle.name}</h3>
+                                        <p className="text-xs text-light-slate mb-3">{circleMap[circle.id] ? t(`community.${circleMap[circle.id]}_desc`) : circle.description}</p>
+                                        <span className="text-xs font-semibold text-primary-blue bg-blue-50 px-2 py-1 rounded-md">{circle.members?.length || 0} {t('community.members')}</span>
                                     </div>
                                     <button 
                                         onClick={() => handleJoinCircle(circle.id)}
                                         disabled={isJoined || !user}
                                         className={`mt-4 w-full py-1.5 rounded-lg text-sm font-bold transition ${isJoined ? 'bg-surface-100 text-light-slate cursor-default' : (!user ? 'opacity-50 cursor-not-allowed' : 'bg-dark-slate text-white hover:bg-black')}`}
                                     >
-                                        {isJoined ? 'Joined' : 'Join Circle'}
+                                        {isJoined ? t('community.joined') : t('community.joinCircle')}
                                     </button>
                                 </div>
                             )

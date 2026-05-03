@@ -1,5 +1,5 @@
 import type { LangCode } from '@/providers/language-provider';
-type T = Record<LangCode, string>;
+type T = Partial<Record<LangCode, string>>;
 
 export const nav: Record<string, T> = {
   diagnose:         { en:'Diagnose',          hi:'निदान',             ta:'நோய் கண்டறிதல்', mr:'निदान',              te:'నిర్ధారణ',       bn:'রোগ নির্ণয়',      kn:'ರೋಗನಿರ್ಣಯ',      gu:'નિદાન',        pa:'ਤਸ਼ਖ਼ੀਸ',       or:'ରୋଗ ନିର୍ଣ୍ଣୟ' },

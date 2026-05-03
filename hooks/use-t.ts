@@ -1,29 +1,16 @@
-'use client';
-import { useLang } from '@/providers/language-provider';
-import { nav } from '@/lib/i18n/nav';
-import { dashboard } from '@/lib/i18n/dashboard';
-import { care } from '@/lib/i18n/care';
-import { diagnose } from '@/lib/i18n/diagnose';
-import { lifeAssist, clinicalProfile } from '@/lib/i18n/pages';
-
-const namespaces: Record<string, Record<string, Record<string, string>>> = {
-  nav, dashboard, care, diagnose, lifeAssist, clinicalProfile,
-};
-
 /**
- * useT('namespace') — returns a translator function t('key')
- * Falls back to English if translation is missing.
+ * Backward-compatible wrapper around react-i18next.
+ * Components using useT('namespace') will now resolve keys via i18next
+ * JSON locale files instead of the old static TS objects.
  *
- * Usage:
- *   const t = useT('nav');
- *   <span>{t('diagnose')}</span>
+ * Usage:  const t = useT('care_ai')  →  t('title')
+ *         Equivalent to: const { t } = useTranslation(); t('care_ai.title')
  */
+import { useTranslation } from 'react-i18next';
+
 export function useT(namespace: string) {
-  const { lang } = useLang();
-  const ns = namespaces[namespace] ?? {};
-  return (key: string): string => {
-    const entry = ns[key];
-    if (!entry) return key;
-    return entry[lang] ?? entry['en'] ?? key;
+  const { t } = useTranslation();
+  return (key: string, options?: Record<string, unknown>): string => {
+    return t(`${namespace}.${key}`, options ?? {}) as string;
   };
 }

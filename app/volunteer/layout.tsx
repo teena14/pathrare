@@ -5,19 +5,21 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, ListTodo, LogOut, MessageSquareText, Settings, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { VolunteerDashboardProvider } from '@/features/volunteer/context/volunteer-dashboard-context';
-
-const VOLUNTEER_TABS = [
-  { href: '/volunteer', label: 'Assigned Tasks', icon: LayoutDashboard },
-  { href: '/volunteer/open', label: 'Open Tasks', icon: ListTodo },
-  { href: '/volunteer/chat', label: 'Case Chat', icon: MessageSquareText },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function VolunteerLayout({ children }: { children: React.ReactNode }) {
   const { signOut, profile } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
   const handleLogout = async () => { await signOut(); router.push('/auth'); };
   const initials = profile?.displayName?.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() ?? 'V';
+
+  const VOLUNTEER_TABS = [
+    { href: '/volunteer',       label: t('volunteer.assignedTasks'), icon: LayoutDashboard },
+    { href: '/volunteer/open',  label: t('volunteer.openTasks'),     icon: ListTodo },
+    { href: '/volunteer/chat',  label: t('volunteer.caseChat'),      icon: MessageSquareText },
+  ];
 
   return (
     <VolunteerDashboardProvider>
@@ -27,8 +29,8 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-6">
               <Link href="/volunteer" className="text-xl font-black text-dark-slate">PathRare</Link>
               <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-slate-50 border border-brand-slate-100 text-xs font-bold text-light-slate">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Volunteer execution workspace
+                <ShieldCheck className="w-3.5 h-3.5" />
+                {t('volunteer.workspaceLabel')}
               </div>
               <div className="hidden md:flex items-center gap-1">
                 {VOLUNTEER_TABS.map((tab) => {
@@ -52,14 +54,14 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-primary-blue bg-brand-blue-50 border border-brand-blue-100 px-2.5 py-1 rounded-full">Volunteer</span>
+              <span className="text-xs font-bold text-primary-blue bg-brand-blue-50 border border-brand-blue-100 px-2.5 py-1 rounded-full">{t('volunteer.badge')}</span>
               <Link href="/auth/complete-profile" className="flex items-center gap-1.5 text-xs font-bold text-light-slate hover:text-primary-blue transition-colors">
                 <Settings className="w-3.5 h-3.5" />
-                Settings
+                {t('volunteer.settings')}
               </Link>
               <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs font-bold text-light-slate hover:text-primary-blue transition-colors">
                 <LogOut className="w-3.5 h-3.5" />
-                Logout
+                {t('volunteer.logout')}
               </button>
               <div className="h-8 w-8 rounded-full bg-primary-blue flex items-center justify-center text-white text-xs font-bold">{initials}</div>
             </div>

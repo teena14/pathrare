@@ -113,3 +113,25 @@
     z-index: 10;
   }
 }
+
+/* ─── RTL Support (Arabic) ─── */
+[dir="rtl"] {
+  font-family: 'Noto Sans Arabic', 'Segoe UI', sans-serif;
+}
+
+[dir="rtl"] .lucide {
+  transform: scaleX(-1);
+}
+
+/* Preserve arrow icons that should NOT flip in RTL */
+[dir="rtl"] .no-flip,
+[dir="rtl"] .lucide-check,
+[dir="rtl"] .lucide-alert-triangle,
+[dir="rtl"] .lucide-sparkles,
+[dir="rtl"] .lucide-dna {
+  transform: none;
+}
+
+/* Logical property helpers */
+[dir="rtl"] .text-start { text-align: right; }
+[dir="ltr"] .text-start { text-align: left; }

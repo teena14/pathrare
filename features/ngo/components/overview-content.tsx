@@ -15,21 +15,10 @@ import {
 } from 'lucide-react';
 import { useNgoDashboard } from '@/features/ngo/context/ngo-dashboard-context';
 import { compactPatientConnectionSummary } from '@/services/ngo/ngo-support';
+import { useLocalizedFormat } from '@/hooks/use-localized-format';
 
 const NgoHeatMap = dynamic(() => import('@/features/ngo/components/NgoHeatMap'), { ssr: false });
 
-function formatRelativeTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'just now';
-  }
-
-  const diffDays = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
-  if (diffDays === 0) return 'today';
-  if (diffDays === 1) return '1 day ago';
-  if (diffDays < 30) return `${diffDays} days ago`;
-  return 'over 30 days ago';
-}
 
 export function NgoOverviewContent() {
   const {
@@ -45,10 +34,12 @@ export function NgoOverviewContent() {
     recentActivity,
     incomingPatientConnections,
   } = useNgoDashboard();
+  const { formatDate, formatNumber, formatRelativeTime } = useLocalizedFormat();
+
   const activeCases = caseRequests.filter((request) => request.status !== 'Resolved').length;
   const topCluster = demandClusters[0];
   const topCategory = categoryBreakdown[0];
-  const today = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date());
+  const today = formatDate(new Date(), { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
     <div className="space-y-6">
@@ -104,7 +95,7 @@ export function NgoOverviewContent() {
                 </div>
               <div>
                 <p className="text-sm font-bold text-light-slate">{item.label}</p>
-                <p className="text-2xl font-black text-dark-slate mt-2">{loading ? '...' : item.value}</p>
+                <p className="text-2xl font-black text-dark-slate mt-2">{loading ? '...' : formatNumber(Number(item.value))}</p>
               </div>
             </div>
           </section>
@@ -294,7 +285,7 @@ export function NgoOverviewContent() {
                 }}
               >
                 <div className="absolute inset-[20%] rounded-full bg-white flex flex-col items-center justify-center text-center">
-                  <p className="text-2xl font-black text-dark-slate">{activeCases}</p>
+                  <p className="text-2xl font-black text-dark-slate">{formatNumber(activeCases)}</p>
                   <p className="text-sm font-medium text-light-slate">Total</p>
                 </div>
               </div>
@@ -305,7 +296,7 @@ export function NgoOverviewContent() {
                 <div key={item.label} className="grid grid-cols-[auto_1fr_auto] gap-3 items-center text-sm">
                   <span className="h-4 w-4 rounded-full" style={{ backgroundColor: item.color }} />
                   <span className="font-medium text-dark-slate">{item.label}</span>
-                  <span className="font-bold text-light-slate">{item.count} ({item.percent}%)</span>
+                  <span className="font-bold text-light-slate">{formatNumber(item.count)} ({formatNumber(item.percent)}%)</span>
                 </div>
               ))}
             </div>
@@ -318,7 +309,7 @@ export function NgoOverviewContent() {
                 </div>
                 <div>
                   <p className="text-sm font-black text-dark-slate">{topCategory?.label}</p>
-                  <p className="text-2xl font-black text-dark-slate mt-2">{topCategory?.percent}%</p>
+                  <p className="text-2xl font-black text-dark-slate mt-2">{topCategory ? formatNumber(topCategory.percent) : 0}%</p>
                   <p className="text-sm text-light-slate font-medium">of total cases</p>
                 </div>
               </div>
@@ -333,7 +324,7 @@ export function NgoOverviewContent() {
 
         <div className="theme-card rounded-[2rem] px-6 py-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="theme-title-24 text-dark-slate">{unmetNeeds} case{unmetNeeds === 1 ? '' : 's'} need your attention</p>
+            <p className="theme-title-24 text-dark-slate">{formatNumber(unmetNeeds)} case{unmetNeeds === 1 ? '' : 's'} need your attention</p>
             <p className="theme-body mt-1 text-light-slate">These cases are unassigned and require immediate action.</p>
           </div>
           <Link href="/ngo/cases" className="inline-flex items-center gap-2 rounded-2xl bg-primary-blue px-5 py-3 text-sm font-bold text-white">

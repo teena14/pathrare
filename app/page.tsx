@@ -3,8 +3,11 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, ShieldAlert, HeartPulse } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Home() {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen flex flex-col items-center bg-surface-50 text-dark-slate">
       {/* Hero Section */}
@@ -15,15 +18,14 @@ export default function Home() {
           transition={{ duration: 0.8 }}
         >
           <div className="inline-block mb-6 px-5 py-2 rounded-[2rem] border-2 border-primary-blue/20 bg-primary-blue/5 text-primary-blue font-bold text-sm shadow-sm">
-            Bridging the gap in rare diseases
+            {t('home.badge')}
           </div>
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 text-dark-slate leading-[1.1]">
-            Turn your <span className="text-gradient">scattered reality</span>
-            <br /> into actionable care.
+            {t('home.headline1')} <span className="text-gradient">{t('home.headline_gradient')}</span>
+            <br /> {t('home.headline2')}
           </h1>
           <p className="max-w-2xl mx-auto text-light-slate text-xl font-medium mb-12 leading-relaxed">
-            An AI-powered health intelligence platform that turns a family's medical reality
-            into a structured, actionable clinical identity. Connect with support you didn't know existed.
+            {t('home.subtitle')}
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -31,7 +33,7 @@ export default function Home() {
               href="/auth" 
               className="px-10 py-5 rounded-full bg-primary-blue hover:bg-blue-700 text-white font-bold text-lg transition-all shadow-[0_8px_30px_rgba(15,93,227,0.3)] hover:shadow-[0_10px_40px_rgba(15,93,227,0.4)] hover:-translate-y-1"
             >
-              Start Your Journey
+              {t('home.startJourney')}
             </Link>
           </div>
         </motion.div>
@@ -40,27 +42,27 @@ export default function Home() {
       {/* The 3 Failures */}
       <section className="w-full max-w-7xl px-6 py-24 border-t border-surface-200">
         <div className="text-center mb-20">
-          <h2 className="text-4xl md:text-5xl font-black mb-6 text-dark-slate">The systemic failures we solve</h2>
-          <p className="text-light-slate text-xl font-medium">Rare diseases are problems of uncertainty, invisibility, and survival.</p>
+          <h2 className="text-4xl md:text-5xl font-black mb-6 text-dark-slate">{t('home.systemicFailures')}</h2>
+          <p className="text-light-slate text-xl font-medium">{t('home.failuresSubtitle')}</p>
         </div>
         
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              title: "Diagnostic Failure",
-              desc: "Conditions are frequently misdiagnosed for years. Symptoms overlap, specialists are scarce.",
+              title: t('home.diagnosticFailure'),
+              desc: t('home.diagnosticFailureDesc'),
               icon: <Search className="w-12 h-12 text-primary-blue" />,
               color: "text-primary-blue border-primary-blue"
             },
             {
-              title: "Access Failure",
-              desc: "Ecosystems of support exist, but they are fragmented, hidden, and entirely undiscoverable.",
+              title: t('home.accessFailure'),
+              desc: t('home.accessFailureDesc'),
               icon: <ShieldAlert className="w-12 h-12 text-pacific-blue" />,
               color: "text-pacific-blue border-pacific-blue"
             },
             {
-              title: "Care Failure",
-              desc: "Day-to-day caregiving involves constant, high-stakes decisions made with no guidance.",
+              title: t('home.careFailure'),
+              desc: t('home.careFailureDesc'),
               icon: <HeartPulse className="w-12 h-12 text-medium-purple" />,
               color: "text-medium-purple border-medium-purple"
             }
