@@ -4,3 +4,7 @@
 - Switched Firebase project to rarity-f316d (updated .env.local; new creds stored in credentials/).
 - [PHASE 2] Added role-specific routes (/patient, /ngo, /volunteer, /coordinator), Life Assist engine, auth overhaul, Leaflet heatmap, and API routes for tasks/allocate.
 `git status --short` - Reviewed current tracked and untracked workspace changes while aligning the repo note files.
+- [CLOUD] Fixed Dockerfile port: EXPOSE 3000 ? EXPOSE 8080, CMD now uses `next start -p 8080` to match Cloud Run's injected PORT env var.
+- [CLOUD] Added `gcloud run deploy` step to cloudbuild.yaml so every `deploy.ps1` run rebuilds the image AND updates the live Cloud Run revision automatically.
+- [CLOUD] Added NEXT_PUBLIC_APP_URL to .env.local pointing to the production Cloud Run URL.
+- [CLOUD] Diagnosed Cloud Run outage: `billingEnabled: false` on project rarity-f316d — linked billing account suspended/inactive. Fix requires re-enabling billing in GCP console (no redeployment needed).

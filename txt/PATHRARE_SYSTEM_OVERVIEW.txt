@@ -1,6 +1,6 @@
 ================================================================================
 PATHRARE â€” COMPLETE SYSTEM OVERVIEW
-Last Updated: April 2026
+Last Updated: May 2026
 ================================================================================
 
 
@@ -575,6 +575,38 @@ Two pipeline variants exist:
     - Misdiagnosis alert system (compare new diagnosis vs old records)
     - Multi-language support (HPO has translations in hp.obo)
     - Coordinator mobile app (React Native)
+
+================================================================================
+16. CLOUD DEPLOYMENT — GOOGLE CLOUD RUN
+================================================================================
+
+  PLATFORM: Google Cloud Run (us-central1), managed serverless containers
+  SERVICE NAME: pathrare-app
+  SERVICE URL: https://pathrare-app-361510568133.us-central1.run.app
+  GCP PROJECT: rarity-f316d
+  IMAGE REGISTRY: us-central1-docker.pkg.dev/rarity-f316d/pathrare/pathrare-app
+
+  DEPLOYMENT FLOW (deploy.ps1 + cloudbuild.yaml):
+    1. deploy.ps1 reads .env.local, validates all required keys
+    2. Submits Cloud Build job (cloudbuild.yaml) with Firebase build-args
+    3. Step 1 — Docker builds the Next.js image (NEXT_PUBLIC_* baked in at build time)
+    4. Step 2 — Image pushed to Artifact Registry
+    5. Step 3 — `gcloud run deploy` updates the live Cloud Run revision
+
+  KEY CONFIG:
+    - Container port: 8080 (Cloud Run injects PORT=8080; CMD uses `next start -p 8080`)
+    - Service account: pathrare-runner@rarity-f316d.iam.gserviceaccount.com
+    - GEMINI_API_KEY: pulled from Secret Manager secret `gemini-api-key` at runtime
+    - Runtime env vars set on Cloud Run: GCP_PROJECT_ID, GCP_LOCATION, NEXT_PUBLIC_APP_URL
+
+  REDEPLOY: run `.\deploy.ps1` from the project root
+
+  KNOWN OUTAGE (2026-05-22):
+    - Cloud Run returned HTTP 500 / "service not available"
+    - Root cause: billingEnabled=false on project rarity-f316d
+    - The linked billing account (01CA83-77087A-29C4C1) was suspended/inactive
+    - Fix: Re-enable billing at console.cloud.google.com/billing?project=rarity-f316d
+    - No redeployment is needed; service resumes automatically once billing is active
 
 
 ================================================================================

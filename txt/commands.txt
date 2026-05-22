@@ -37,3 +37,8 @@ Keep this file updated alongside `error.txt` for each task, as requested.
 `rg -n "setLoading\\(|window.setInterval|setInterval\\(" app lib` - Traced repeated polling and loading state changes to find the source of screen blinking.
 `cmd /c npx eslint app/ngo/ngo-dashboard-context.tsx` - Verified the silent background refresh fix for NGO dashboard blinking is lint-clean.
 `Get-Content features.txt`, `Get-Content git.txt`, `Get-Content commands.txt`, `Get-Content error.txt` - Reviewed the project note files to align logging by category.
+`& gcloud run services logs read pathrare-app --region us-central1 --limit 50` - Checked Cloud Run request logs to find the root cause of the 500 errors (billing disabled).
+`& gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=pathrare-app AND severity>=ERROR"` - Read structured error logs confirming "billing is disabled" error from GCP infrastructure.
+`& gcloud run services describe pathrare-app --region us-central1 --format yaml` - Inspected live service configuration: confirmed port 8080, env vars, and service account.
+`& gcloud billing projects describe rarity-f316d` - Confirmed `billingEnabled: false` on the project — root cause of the outage.
+`& gcloud run services describe pathrare-app --region us-central1 --format "value(status.url)"` - Retrieved the canonical Cloud Run service URL.

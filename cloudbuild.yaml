@@ -18,6 +18,22 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/pathrare/pathrare-app:$BUILD_ID']
 
+  # Step 3: Deploy the new image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'pathrare-app'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/pathrare/pathrare-app:$BUILD_ID'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--service-account=pathrare-runner@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--set-env-vars=GCP_PROJECT_ID=${_GCP_PROJECT_ID},GCP_LOCATION=${_GCP_LOCATION},NEXT_PUBLIC_APP_URL=${_NEXT_PUBLIC_APP_URL}'
+      - '--update-secrets=GEMINI_API_KEY=gemini-api-key:latest'
+      - '--port=8080'
+
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/pathrare/pathrare-app:$BUILD_ID'
 

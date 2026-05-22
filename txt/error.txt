@@ -51,3 +51,17 @@
   CAUSE: Older documents in the Firestore collection did not have the "id" field stored directly within their data payload, causing "doc.id" and "report.id" to evaluate to undefined when mapping items in the UI.
   FIX: Updated GET /api/reports and /api/documents routes to explicitly include the document ID via "id: d.id" alongside "...d.data()!.
 
+
+- ERROR: Cloud Run returns "The service you requested is not available yet" / HTTP 500 on every request (2026-05-22)
+  LOG: gcloud logging read shows `textPayload: "The request failed because billing is disabled for this project."`
+  ROOT CAUSE: `billingEnabled: false` on project rarity-f316d — the linked billing account (01CA83-77087A-29C4C1 "Riya Raj") was suspended or free-trial credits expired, causing GCP to disable billing on the project even though the account appeared linked in the console.
+  FIX: Re-enable / re-link an active billing account at console.cloud.google.com/billing?project=rarity-f316d. No redeployment required — the service resumes immediately once billing is re-enabled.
+
+- ISSUE: Dockerfile was exposing port 3000 but Cloud Run injects PORT=8080 at runtime (2026-05-22)
+  FIX: Updated Dockerfile runner stage to set `ENV PORT=8080`, changed EXPOSE to 8080, and changed CMD to `next start -p 8080` so the container always listens on the correct port.
+
+- ISSUE: cloudbuild.yaml had no deploy step — it only built and pushed the image, never updating the live Cloud Run service (2026-05-22)
+  FIX: Added Step 3 to cloudbuild.yaml: `gcloud run deploy pathrare-app` using the freshly pushed image, wiring the service account, env vars (GCP_PROJECT_ID, GCP_LOCATION, NEXT_PUBLIC_APP_URL), and the GEMINI_API_KEY secret automatically on every build.
+
+- ISSUE: .env.local was missing NEXT_PUBLIC_APP_URL, causing deploy.ps1 to fail with "Missing required .env.local keys" (2026-05-22)
+  FIX: Added `NEXT_PUBLIC_APP_URL=https://pathrare-app-361510568133.us-central1.run.app` to .env.local.

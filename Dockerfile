@@ -27,6 +27,8 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+# Cloud Run injects PORT at runtime (default 8080). Next.js must listen on it.
+ENV PORT=8080
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
@@ -34,5 +36,5 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/data ./data
 
-EXPOSE 3000
-CMD ["npm", "run", "start"]
+EXPOSE 8080
+CMD ["node_modules/.bin/next", "start", "-p", "8080"]
