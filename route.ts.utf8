@@ -1,0 +1,150 @@
+﻿/**
+ * POST /api/diagnose
+ *
+ * Pipeline:
+ *   1. OCR (Google Vision API) ÔÇö if image uploaded
+ *      OR pdf-parse ÔÇö if PDF uploaded
+ *      OR plain text ÔÇö if symptoms typed
+ *   2. HPO text pre-matching (no AI) ÔÇö scans text for HPO term names
+ *   3. HPO Jaccard scoring ÔÇö ranks diseases by phenotype overlap
+ *   4. Gemini ÔÇö extracts symptoms + HP codes, ranks top diseases
+ *      (HPO candidates highlighted in prompt for better accuracy)
+ *   5. Merge LLM + HPO scores (55% Gemini + 45% HPO evidence)
+ *   6. Enrich with ICD/OMIM from alignments.json
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import * as fs from "fs";
+import * as path from "path";
+
+// ÔöÇÔöÇ Types ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+interface AlignmentEntry {
+  orpha_code: string;
+  name: string;
+  icd_codes: string[];
+  omim: string[];
+}
+interface ClassificationEntry { orpha_code: string; name: string; type: string; }
+interface HPOTerm { id: string; name: string; synonyms: string[]; definition: string; }
+interface SymptomWithHPO { term: string; hpo_code: string; }
+interface GeminiMatch { orpha_code: string; name: string; confidence: number; score: number; reasoning: string; }
+interface HPOMatch { orpha_code: string; name: string; hpo_score: number; matched_hpo: { code: string; name: string }[]; }
+interface VectorMatch { orpha_code: string; name: string; vector_score: number; }
+interface VectorEntry { orpha_code: string; name: string; embedding: number[]; }
+interface FinalMatch {
+  orpha_code: string; name: string; confidence: number;
+  gemini_confidence: number; hpo_score: number; vector_score: number; combined_score: number;
+  reasoning: string; icd_codes: string[]; omim: string[];
+  matched_hpo: { code: string; name: string }[];
+}
+
+// ÔöÇÔöÇ Module-level caches ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+let alignments: AlignmentEntry[] = [];
+let diseaseNameMap: Map<string, AlignmentEntry> = new Map();
+let omimToOrpha: Map<string, string> = new Map();
+let hpoTerms: Map<string, HPOTerm> = new Map();
+let diseaseHPO: Map<string, Set<string>> = new Map();
+let hpoToDisease: Map<string, Set<string>> = new Map();
+let hpoTextLookup: Map<string, string> = new Map();
+let vectorIndex: VectorEntry[] | null = null;  // null = not loaded yet, [] = not available
+let cachedModels: string[] | null = null;
+let hpoLoaded = false;
+
+async function getGoogleAccessToken(scopes: string[]): Promise<string | null> {
+  try {
+    const { GoogleAuth } = await import("google-auth-library");
+    let auth: InstanceType<typeof GoogleAuth>;
+
+    // 1) Vercel / any env: full JSON stored as env var (preferred)
+    const serviceAccountJson = process.env.GCP_SERVICE_ACCOUNT ?? process.env.GCP_SERVICE_ACCOUNT_JSON;
+    if (serviceAccountJson) {
+      const creds = JSON.parse(serviceAccountJson);
+      if (creds.private_key) {
+        creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+      }
+      auth = new GoogleAuth({
+        credentials: creds,
+        scopes,
+      });
+    // 2) Local dev: path to JSON file via GOOGLE_APPLICATION_CREDENTIALS
+    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      auth = new GoogleAuth({
+        credentials: JSON.parse(
+          fs.readFileSync(
+            path.isAbsolute(credentialsPath)
+              ? credentialsPath
+              : path.join(process.cwd(), credentialsPath),
+            "utf-8"
+          )
+        ),
+        scopes,
+      });
+    // 3) Cloud Run / GCE: Application Default Credentials
+    } else {
+      auth = new GoogleAuth({ scopes });
+    }
+
+    const token = await (await auth.getClient()).getAccessToken();
+    return token.token ?? null;
+  } catch (error) {
+    console.warn("[diagnose] Failed to obtain Google access token:", error);
+    return null;
+  }
+}
+
+// ÔöÇÔöÇ Orphanet loader ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+function loadOrphanetData() {
+  if (alignments.length > 0) return;
+  const alignPath = path.join(process.cwd(), "data", "orphanet", "parsed", "alignments.json");
+  const classPath = path.join(process.cwd(), "data", "orphanet", "parsed", "classifications.json");
+  if (fs.existsSync(alignPath)) {
+    const raw: AlignmentEntry[] = JSON.parse(fs.readFileSync(alignPath, "utf-8"));
+    alignments = raw;
+    diseaseNameMap = new Map(raw.map((d) => [d.orpha_code, d]));
+  }
+  const missing = alignments.filter((d) => !d.name).length;
+  if (missing > 0 && fs.existsSync(classPath)) {
+    const classes: ClassificationEntry[] = JSON.parse(fs.readFileSync(classPath, "utf-8"));
+    const cm = new Map(classes.map((c) => [c.orpha_code, c.name]));
+    alignments = alignments.map((d) => ({ ...d, name: d.name || cm.get(d.orpha_code) || `ORPHA:${d.orpha_code}` }));
+    diseaseNameMap = new Map(alignments.map((d) => [d.orpha_code, d]));
+  }
+  for (const e of alignments) for (const o of e.omim) omimToOrpha.set(`OMIM:${o}`, e.orpha_code);
+  console.log(`[diagnose] ${alignments.length} Orphanet diseases loaded`);
+}
+
+// ÔöÇÔöÇ Vector index loader ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+function loadVectorIndex() {
+  if (vectorIndex !== null) return; // already attempted
+  const indexPath = path.join(process.cwd(), "data", "orphanet", "parsed", "index.json");
+  if (fs.existsSync(indexPath)) {
+    vectorIndex = JSON.parse(fs.readFileSync(indexPath, "utf-8")) as VectorEntry[];
+    console.log(`[diagnose] Vector index loaded: ${vectorIndex.length} disease embeddings`);
+  } else {
+    vectorIndex = []; // mark as attempted ÔÇö won't retry
+    console.log("[diagnose] No index.json found ÔÇö vector search disabled (run scripts/build_hpo_index.py)");
+  }
+}
+
+// ÔöÇÔöÇ HPO loader ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ÔöÇÔöÇ Vertex AI ÔÇö embed patient symptom text ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+async function embedPatientText(text: string): Promise<number[] | null> {
+  if (!vectorIndex?.length) return null;
+
+  try {
+    const token = await getGoogleAccessToken(["https://www.googleapis.com/auth/cloud-platform"]);
+    if (!token) return null;
+
+    const project  = process.env.GCP_PROJECT_ID ?? "rarity-f316d";
+    const location = process.env.GCP_LOCATION ?? "us-central1";
+    const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google/models/text-embedding-004:predict`;
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ instances: [{ content: text.slice(0, 2048) }] }),
+    });
+    const data = await res.json();
+    const embedding = data.predictions?.[0]?.embeddings?.values as number[] | undefined;
+    if (!embedding?.length) { console.warn("[diagnose] Vertex AI returned empty embedding"); return null; }

@@ -1,36 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PathRare
 
-## Getting Started
+PathRare is an advanced AI-powered diagnostic engine that matches patient symptoms and clinical documents to rare diseases using semantic search, HPO ontology, and Gemini LLMs.
 
-First, run the development server:
+## Deployment to Vercel
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This application is fully compatible with Vercel and requires zero Google Cloud Platform (GCP) billing dependencies.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. **Create a project on Vercel**: Connect your GitHub repository.
+2. **Environment Variables**: Add the variables from `.env.example` into your Vercel project settings. You can obtain a free Gemini API key from [Google AI Studio](https://aistudio.google.com/).
+3. **Deploy**: Vercel will automatically build and deploy your Next.js application. 
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Local Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Run `npm install`
+2. Copy `.env.example` to `.env.local` and populate the keys.
+3. Start the dev server: `npm run dev`
+4. Open [http://localhost:3000](http://localhost:3000)
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+- **Frontend**: Next.js (App Router), React, Tailwind CSS, Framer Motion
+- **OCR**: Tesseract.js (WASM-based, runs in-memory without GCP Vision API)
+- **Embedding / LLM**: Gemini API (replaces Vertex AI)
+- **Search Engine**: In-memory vector search over generated embeddings
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

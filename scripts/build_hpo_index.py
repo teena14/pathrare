@@ -1,11 +1,11 @@
 """
 build_hpo_index.py
 ──────────────────
-Builds a Vertex AI vector index for PathRare's diagnostic engine.
+Builds a Gemini vector index for PathRare's diagnostic engine.
 
 For each Orphanet disease that has HPO annotations, this script creates a
 rich text description combining the disease name, classification type, and
-all known HPO phenotype terms. It then embeds that description using Vertex AI
+all known HPO phenotype terms. It then embeds that description using Gemini
 text-embedding-004 and saves the result to data/orphanet/parsed/index.json.
 
 The index is used at runtime in /api/diagnose for semantic vector search —
@@ -22,19 +22,15 @@ Output:
   data/orphanet/parsed/index.json
 
 Prerequisites:
-  pip install google-cloud-aiplatform python-dotenv
-
-Usage:
-  cd c:/Users/User/Desktop/pathrare
-  python scripts/build_hpo_index.py
-
-Time estimate: ~10 minutes for 12,000 HPO-annotated diseases.
-Cost estimate: ~$0.02 (text-embedding-004 is very cheap).
+  pip install python-dotenv
+  GEMINI_API_KEY must be set in your environment (or .env.local)
 """
 
 import json
 import os
 import time
+import urllib.request
+import urllib.error
 from pathlib import Path
 from collections import defaultdict
 
@@ -44,9 +40,6 @@ try:
 except ImportError:
     pass
 
-import vertexai
-from vertexai.language_models import TextEmbeddingModel
-
 # ── Paths ──────────────────────────────────────────────────────────────────────
 ALIGNMENTS   = Path("data/orphanet/parsed/alignments.json")
 CLASSIFS     = Path("data/orphanet/parsed/classifications.json")
@@ -55,11 +48,10 @@ OBO_FILE     = Path("data/hpo/hp.obo")
 OUT_FILE     = Path("data/orphanet/parsed/index.json")
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-BATCH_SIZE   = 50    # Vertex AI supports up to 250 instances per request
-RATE_DELAY   = 0.3   # seconds between batches
-MIN_HPO_TERMS = 2    # only embed diseases with at least this many HPO terms
-SAVE_EVERY   = 200   # write partial results every N diseases (resume on crash)
-
+BATCH_SIZE   = 50    
+RATE_DELAY   = 1.0   
+MIN_HPO_TERMS = 2    
+SAVE_EVERY   = 200   
 
 def parse_obo_names(obo_path: Path) -> dict[str, str]:
     """Parse hp.obo → {HP:XXXXXXX: term_name}"""
@@ -96,41 +88,46 @@ def parse_hpoa(hpoa_path: Path) -> dict[str, list[str]]:
 
 
 def build_disease_text(name: str, disease_type: str, hpo_names: list[str]) -> str:
-    """
-    Creates a rich text description for embedding.
-    Format optimised for semantic similarity with patient symptom descriptions.
-    """
     parts = [f"Rare disease: {name}."]
     if disease_type and disease_type not in ("Disease", ""):
         parts.append(f"Classification: {disease_type}.")
     if hpo_names:
-        # Put symptoms in natural language for better semantic matching
         parts.append(f"Key clinical features include: {', '.join(hpo_names[:30])}.")
         if len(hpo_names) > 30:
             parts.append(f"Additional features: {', '.join(hpo_names[30:60])}.")
     return " ".join(parts)
 
 
-def embed_batch(model: TextEmbeddingModel, texts: list[str]) -> list[list[float]]:
-    response = model.get_embeddings(texts)
-    return [r.values for r in response]
+def embed_batch(api_key: str, texts: list[str]) -> list[list[float]]:
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={api_key}"
+    results = []
+    
+    for text in texts:
+        data = {
+            "model": "models/text-embedding-004",
+            "content": {
+                "parts": [{"text": text[:2048]}]
+            }
+        }
+        
+        req = urllib.request.Request(url, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode())
+            results.append(res_data.get('embedding', {}).get('values', []))
+            
+    return results
 
 
 def main():
-    project_id = os.environ.get("GCP_PROJECT_ID", "rarity-f316d")
-    location   = os.environ.get("GCP_LOCATION", "us-central1")
-    creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "./credentials/gcp-service-account.json")
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("Error: GEMINI_API_KEY environment variable is missing.")
+        return
 
-    print("PathRare — HPO-Enriched Vertex AI Index Builder")
+    print("PathRare — HPO-Enriched Gemini Index Builder")
     print("=" * 55)
-    print(f"  Project  : {project_id}")
-    print(f"  Location : {location}")
-    print(f"  Creds    : {creds_path}")
+    print("  Using Gemini API (Google AI Studio)")
     print()
-
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
-    vertexai.init(project=project_id, location=location)
-    model = TextEmbeddingModel.from_pretrained("text-embedding-004")
 
     # ── Load HPO term names ──────────────────────────────────────────────────
     print("📖 Parsing hp.obo...")
@@ -194,16 +191,22 @@ def main():
         batch = pending[i: i + BATCH_SIZE]
         texts = [d["text"] for d in batch]
         try:
-            embeddings = embed_batch(model, texts)
+            embeddings = embed_batch(api_key, texts)
             for disease, emb in zip(batch, embeddings):
-                results.append({
-                    "orpha_code": disease["orpha_code"],
-                    "name": disease["name"],
-                    "embedding": emb,
-                })
+                if emb:
+                    results.append({
+                        "orpha_code": disease["orpha_code"],
+                        "name": disease["name"],
+                        "embedding": emb,
+                    })
             done = i + len(batch)
             pct = done / len(pending) * 100
             print(f"  [{done:>5}/{len(pending)}] {pct:5.1f}%  — last: {batch[-1]['name'][:50]}")
+        except urllib.error.HTTPError as e:
+            print(f"  ⚠ HTTP Error at batch {i}: {e.code} {e.reason}")
+            errors += 1
+            time.sleep(10)
+            continue
         except Exception as e:
             print(f"  ⚠ Error at batch {i}: {e}")
             errors += 1
@@ -227,6 +230,6 @@ def main():
     print()
     print("▶ Restart your Next.js dev server — /api/diagnose will now use vector search.")
 
-
 if __name__ == "__main__":
     main()
+
