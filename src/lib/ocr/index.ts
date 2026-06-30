@@ -48,53 +48,35 @@ async function extractWithGemini(fileBuffer: Buffer, mimeType: string, apiKey: s
 
 /**
  * Extracts text from an uploaded image or PDF document.
- * Tries Tesseract/pdf-img-convert first, falling back to Gemini Vision API if empty or failed.
+ * Tries Tesseract first for images, and uses Gemini Vision API for PDFs or as a fallback.
  */
 export async function runOCR(fileBuffer: Buffer, fileType: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY ?? "";
   logger.info(`[OCR] type=${fileType} size=${fileBuffer.length}b`);
 
+  if (fileType === "application/pdf") {
+    logger.info("[OCR] Skipping Tesseract for PDF, sending to Gemini...");
+    if (apiKey) return extractWithGemini(fileBuffer, "application/pdf", apiKey);
+    return "";
+  }
+
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Tesseract = require("tesseract.js");
 
-    if (fileType === "application/pdf") {
-      logger.info("[OCR] Converting PDF to images...");
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const pdf2img = require("pdf-img-convert");
-      
-      const pdfArray = await pdf2img.convert(fileBuffer);
-      let fullText = "";
-      
-      for (let i = 0; i < pdfArray.length; i++) {
-        logger.info(`[OCR] Processing PDF page ${i + 1}/${pdfArray.length}`);
-        const pageBuffer = Buffer.from(pdfArray[i]);
-        const result = await Tesseract.recognize(pageBuffer, 'eng');
-        fullText += result.data.text + "\n\n";
-      }
-      
-      if (fullText.trim().length > 50) {
-        logger.info(`[OCR] Tesseract PDF: ${fullText.length} chars`);
-        return fullText;
-      }
-      logger.warn("[OCR] Tesseract PDF returned empty - Gemini fallback");
-      if (apiKey) return extractWithGemini(fileBuffer, "application/pdf", apiKey);
-      return "";
-    } else {
-      logger.info("[OCR] Running Tesseract on image...");
-      const result = await Tesseract.recognize(fileBuffer, 'eng');
-      
-      if (result.data.text.trim().length > 50) {
-        logger.info(`[OCR] Tesseract Image: ${result.data.text.length} chars`);
-        return result.data.text;
-      }
-      logger.warn("[OCR] Tesseract Image empty - Gemini fallback");
-      const mime = fileType.startsWith("image/") ? fileType : "image/png";
-      if (apiKey) return extractWithGemini(fileBuffer, mime, apiKey);
-      return "";
+    logger.info("[OCR] Running Tesseract on image...");
+    const result = await Tesseract.recognize(fileBuffer, 'eng');
+    
+    if (result.data.text.trim().length > 50) {
+      logger.info(`[OCR] Tesseract Image: ${result.data.text.length} chars`);
+      return result.data.text;
     }
+    logger.warn("[OCR] Tesseract Image empty - Gemini fallback");
+    const mime = fileType.startsWith("image/") ? fileType : "image/png";
+    if (apiKey) return extractWithGemini(fileBuffer, mime, apiKey);
+    return "";
   } catch (e) {
-    logger.warn("[OCR] Tesseract/pdf-img-convert failed", e);
+    logger.warn("[OCR] Tesseract failed", e);
     const mime = fileType.startsWith("image/") ? fileType : "image/png";
     if (apiKey) return extractWithGemini(fileBuffer, mime, apiKey);
     return "";
